@@ -51,14 +51,20 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg"]
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "linux": {
       "category": "Development",
-      "target": ["AppImage"]
+      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "win": {
-      "target": ["nsis"]
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
   }
 }

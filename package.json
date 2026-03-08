@@ -1,0 +1,69 @@
+{
+  "name": "grpc-explorer-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pulsar GRPC desktop client",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "node electron/build-backend.cjs",
+    "desktop:build": "npm run build:frontend && npm run build:backend",
+    "desktop:dev": "node electron/dev.cjs",
+    "desktop:dir": "npm run desktop:build && electron-builder --dir",
+    "desktop:dist": "npm run desktop:build && electron-builder",
+    "desktop:start": "npm run desktop:build && node electron/open.cjs",
+    "desktop:open": "node electron/open.cjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "electron": "^40.8.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0"
+  },
+  "build": {
+    "appId": "ee.citilink.pulsar-grpc",
+    "productName": "Pulsar GRPC",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "backend",
+        "filter": [
+          "grpc-explorer-backend",
+          "grpc-explorer-backend.exe"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "category": "Development",
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    }
+  }
+}

@@ -1,0 +1,173 @@
+syntax = "proto3";
+
+package hello;
+
+option go_package = "grpc-explorer/testserver/hello";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+enum GrpcStatusCode {
+  OK = 0;
+  CANCELLED = 1;
+  UNKNOWN = 2;
+  INVALID_ARGUMENT = 3;
+  DEADLINE_EXCEEDED = 4;
+  NOT_FOUND = 5;
+  ALREADY_EXISTS = 6;
+  PERMISSION_DENIED = 7;
+  RESOURCE_EXHAUSTED = 8;
+  FAILED_PRECONDITION = 9;
+  ABORTED = 10;
+  OUT_OF_RANGE = 11;
+  UNIMPLEMENTED = 12;
+  INTERNAL = 13;
+  UNAVAILABLE = 14;
+  DATA_LOSS = 15;
+  UNAUTHENTICATED = 16;
+}
+
+message ErrorRequest {
+  GrpcStatusCode code = 1;
+  string message = 2;
+  repeated google.protobuf.Any details = 3;
+}
+
+message ErrorResponse {}
+
+service EchoService {
+  rpc Echo (EchoRequest) returns (EchoRequest);
+  rpc FailWithError (ErrorRequest) returns (ErrorResponse);
+}
+
+enum Priority {
+  INVALID  = 0;
+  LOW      = 1;
+  MEDIUM   = 2;
+  HIGH     = 3;
+  CRITICAL = 4;
+}
+
+message NestedObject {
+  string label = 1;
+  int32  value = 2;
+  optional NestedObject child = 3;
+}
+
+message EchoRequest {
+  // Scalar fields
+  double   double_value   = 1;
+  float    float_value    = 2;
+  int32    int32_value    = 3;
+  int64    int64_value    = 4;
+  uint32   uint32_value   = 5;
+  uint64   uint64_value   = 6;
+  sint32   sint32_value   = 7;
+  sint64   sint64_value   = 8;
+  fixed32  fixed32_value  = 9;
+  fixed64  fixed64_value  = 10;
+  sfixed32 sfixed32_value = 11;
+  sfixed64 sfixed64_value = 12;
+  bool     bool_value     = 13;
+  string   string_value   = 14;
+  bytes    bytes_value    = 15;
+
+  // Repeated scalar fields
+  repeated double   repeated_double   = 16;
+  repeated float    repeated_float    = 17;
+  repeated int32    repeated_int32    = 18;
+  repeated int64    repeated_int64    = 19;
+  repeated uint32   repeated_uint32   = 20;
+  repeated uint64   repeated_uint64   = 21;
+  repeated sint32   repeated_sint32   = 22;
+  repeated sint64   repeated_sint64   = 23;
+  repeated fixed32  repeated_fixed32  = 24;
+  repeated fixed64  repeated_fixed64  = 25;
+  repeated sfixed32 repeated_sfixed32 = 26;
+  repeated sfixed64 repeated_sfixed64 = 27;
+  repeated bool     repeated_bool     = 28;
+  repeated string   repeated_string   = 29;
+  repeated bytes    repeated_bytes    = 30;
+
+  // Single object
+  NestedObject nested_object = 31;
+
+  // Array of objects
+  repeated NestedObject nested_object_list = 32;
+
+  // Optional scalar fields (explicit presence)
+  optional double   opt_double   = 33;
+  optional float    opt_float    = 34;
+  optional int32    opt_int32    = 35;
+  optional int64    opt_int64    = 36;
+  optional uint32   opt_uint32   = 37;
+  optional uint64   opt_uint64   = 38;
+  optional sint32   opt_sint32   = 39;
+  optional sint64   opt_sint64   = 40;
+  optional fixed32  opt_fixed32  = 41;
+  optional fixed64  opt_fixed64  = 42;
+  optional sfixed32 opt_sfixed32 = 43;
+  optional sfixed64 opt_sfixed64 = 44;
+  optional bool     opt_bool     = 45;
+  optional string   opt_string   = 46;
+  optional bytes    opt_bytes    = 47;
+
+  // Deprecated field for UI testing
+  string old_field = 64 [deprecated = true];
+
+  // Enum field
+  Priority priority = 65;
+
+  // Well-known types
+  google.protobuf.Timestamp timestamp_value = 66;
+  google.protobuf.Duration duration_value = 67;
+  google.protobuf.FieldMask field_mask_value = 68;
+
+  google.protobuf.StringValue string_wrapper = 69;
+  google.protobuf.BoolValue bool_wrapper = 70;
+  google.protobuf.Int32Value int32_wrapper = 71;
+  google.protobuf.Int64Value int64_wrapper = 72;
+  google.protobuf.UInt32Value uint32_wrapper = 73;
+  google.protobuf.UInt64Value uint64_wrapper = 74;
+  google.protobuf.FloatValue float_wrapper = 75;
+  google.protobuf.DoubleValue double_wrapper = 76;
+  google.protobuf.BytesValue bytes_wrapper = 77;
+
+  google.protobuf.Any any_value = 78;
+  google.protobuf.Struct struct_value = 79;
+  google.protobuf.ListValue list_value = 80;
+  google.protobuf.Value value = 81;
+
+  repeated google.protobuf.Timestamp repeated_timestamp = 82;
+  repeated google.protobuf.Duration repeated_duration = 83;
+  repeated google.protobuf.Any repeated_any = 84;
+
+  // Test maps
+  map<string, string> map_string_string = 85;
+  map<string, NestedObject> map_string_object = 86;
+  map<int32, int32> map_int32_int32 = 87;
+
+  // Oneof with all scalar types + one object
+  oneof oneof_value {
+    double   oneof_double   = 48;
+    float    oneof_float    = 49;
+    int32    oneof_int32    = 50;
+    int64    oneof_int64    = 51;
+    uint32   oneof_uint32   = 52;
+    uint64   oneof_uint64   = 53;
+    sint32   oneof_sint32   = 54;
+    sint64   oneof_sint64   = 55;
+    fixed32  oneof_fixed32  = 56;
+    fixed64  oneof_fixed64  = 57;
+    sfixed32 oneof_sfixed32 = 58;
+    sfixed64 oneof_sfixed64 = 59;
+    bool     oneof_bool     = 60;
+    string   oneof_string   = 61;
+    bytes    oneof_bytes    = 62;
+    NestedObject oneof_object = 63;
+  }
+}

@@ -43,6 +43,10 @@
           "grpc-explorer-backend",
           "grpc-explorer-backend.exe"
         ]
+      },
+      {
+        "from": "frontend/dist",
+        "to": "static"
       }
     ],
     "mac": {

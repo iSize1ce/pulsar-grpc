@@ -1,3 +1,6 @@
+const backendPort = new URLSearchParams(window.location.search).get('backendPort')
+export const apiBase = backendPort ? `http://127.0.0.1:${backendPort}` : ''
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -8,7 +11,7 @@ export class ApiError extends Error {
 }
 
 export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const resp = await fetch(url, options)
+  const resp = await fetch(apiBase + url, options)
   if (!resp.ok) {
     let msg = resp.statusText
     try {

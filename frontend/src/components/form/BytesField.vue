@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, inject, withDefaults } from 'vue'
+  import { ref, inject } from 'vue'
   import type { ProtoField } from '@/types/proto'
   import { randomValue } from '@/utils/randomValue'
   import { typeLabel } from './fieldUtils'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, defineProps, withDefaults } from 'vue'
+  import { computed } from 'vue'
   import type { ProtoField } from '@/types/proto'
   import { isWktScalarField } from '@/utils/wktScalar'
   import ScalarField from './ScalarField.vue'

@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const backendPort = env.VITE_BACKEND_PORT || '22333'
 
   return {
+    base: './',
     plugins: [vue()],
     resolve: {
       alias: {
@@ -14,7 +15,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      outDir: '../static',
+      outDir: 'dist',
       emptyOutDir: true,
     },
     server: {

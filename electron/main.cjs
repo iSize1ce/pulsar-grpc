@@ -9,8 +9,8 @@ const rootDir = path.resolve(__dirname, '..')
 const isDev = process.env.GRPC_EXPLORER_DEV === '1'
 const backendPort = process.env.GRPC_EXPLORER_PORT || '22333'
 const backendUrl = `http://127.0.0.1:${backendPort}`
-const rendererUrl = process.env.GRPC_EXPLORER_RENDERER_URL || backendUrl
-const rendererOrigin = new URL(rendererUrl).origin
+const rendererUrl = process.env.GRPC_EXPLORER_RENDERER_URL || null
+const rendererOrigin = rendererUrl ? new URL(rendererUrl).origin : null
 const userDataDir = path.join(app.getPath('appData'), productName)
 const backendDataDir = path.join(userDataDir, 'data')
 const goCacheDir = isDev
@@ -181,7 +181,8 @@ function isExternalUrl(url) {
 
 function isAllowedNavigation(url) {
   try {
-    return new URL(url).origin === rendererOrigin
+    if (rendererOrigin) return new URL(url).origin === rendererOrigin
+    return url.startsWith('file://')
   } catch {
     return false
   }
@@ -323,6 +324,7 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       devTools: true,
+      webSecurity: false,
     },
   })
 
@@ -333,7 +335,15 @@ async function createWindow() {
     window.once('ready-to-show', resolve)
   })
 
-  await Promise.all([window.loadURL(rendererUrl), readyToShow])
+  const loadPromise = rendererUrl
+    ? window.loadURL(rendererUrl)
+    : window.loadFile(
+        app.isPackaged
+          ? path.join(process.resourcesPath, 'static', 'index.html')
+          : path.join(rootDir, 'frontend', 'dist', 'index.html'),
+        { query: { backendPort } }
+      )
+  await Promise.all([loadPromise, readyToShow])
   if (!window.isDestroyed()) {
     window.show()
   }

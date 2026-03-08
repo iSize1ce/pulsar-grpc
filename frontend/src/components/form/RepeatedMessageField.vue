@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { inject, computed, withDefaults } from 'vue'
+  import { inject, computed } from 'vue'
   import type { ProtoField } from '@/types/proto'
   import { typeLabel } from './fieldUtils'
   import { useMethodStore } from '@/stores/method'

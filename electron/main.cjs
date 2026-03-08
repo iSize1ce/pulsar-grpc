@@ -36,7 +36,7 @@ function getBackendCommand() {
     return {
       command: process.platform === 'win32' ? 'go.exe' : 'go',
       args: ['run', '.'],
-      cwd: rootDir,
+      cwd: path.join(rootDir, 'backend'),
     }
   }
 

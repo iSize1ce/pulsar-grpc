@@ -45,18 +45,18 @@ desktop-build:
 	npm run desktop:build
 
 backend-run:
-	go run .
+	cd backend && go run .
 
 testserver-run:
-	go run ./testserver
+	cd backend && go run ./testserver
 
 web-run:
 	npm run build:frontend
-	go run .
+	cd backend && go run .
 
 web-dev:
 	trap 'kill 0' EXIT INT TERM; \
-	GRPC_EXPLORER_NO_BROWSER=1 GRPC_EXPLORER_PORT=22333 go run . & \
+	cd backend && GRPC_EXPLORER_NO_BROWSER=1 GRPC_EXPLORER_PORT=22333 go run . & \
 	npm --prefix $(FRONTEND_DIR) run dev
 
 desktop-dev:

@@ -13,7 +13,7 @@ fs.mkdirSync(outputDir, { recursive: true })
 fs.mkdirSync(goCacheDir, { recursive: true })
 
 const result = spawnSync('go', ['build', '-o', path.join(outputDir, binaryName), '.'], {
-  cwd: rootDir,
+  cwd: path.join(rootDir, 'backend'),
   env: {
     ...process.env,
     GOCACHE: goCacheDir,

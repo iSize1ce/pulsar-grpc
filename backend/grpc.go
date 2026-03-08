@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"strings"
+	"log/slog"
 
 	"github.com/jhump/protoreflect/v2/grpcdynamic"
 	"github.com/jhump/protoreflect/v2/grpcreflect"
@@ -27,17 +26,12 @@ type grpcSession struct {
 func (s *grpcSession) Close() {
 	s.client.Reset()
 	if err := s.conn.Close(); err != nil {
-		log.Printf("grpc conn close: %v", err)
+		slog.Warn("grpc conn close", "err", err)
 	}
 }
 
 // openSession connects to a gRPC server and sets up reflection.
-// If the address has no port, defaults to :50051.
 func openSession(ctx context.Context, addr string) (*grpcSession, error) {
-	if !strings.Contains(addr, ":") {
-		addr += ":50051"
-	}
-
 	//nolint:staticcheck // grpc.Dial is deprecated but grpc.NewClient changes resolver semantics
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

@@ -1,7 +1,7 @@
 {
   "name": "pulsar-grpc",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Pulsar GRPC desktop client",
   "type": "module",
   "main": "electron/main.cjs",

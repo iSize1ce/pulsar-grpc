@@ -62,7 +62,7 @@ func dataDir() string {
 			base = filepath.Join(os.Getenv("HOME"), ".local", "share")
 		}
 	}
-	dir := filepath.Join(base, "grpc-explorer")
+	dir := filepath.Join(base, "pulsar-grpc")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		log.Fatalf("create data dir: %v", err)
 	}

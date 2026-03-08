@@ -1,4 +1,4 @@
-module grpc-explorer
+module pulsar-grpc
 
 go 1.24.0
 

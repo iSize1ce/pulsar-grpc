@@ -1,4 +1,4 @@
-module grpc-explorer/testserver
+module pulsar-grpc/testserver
 
 go 1.21
 

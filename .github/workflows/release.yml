@@ -52,12 +52,9 @@ jobs:
           name: release-${{ matrix.platform }}
           path: |
             release/*.dmg
-            release/*.zip
             release/*.AppImage
-            release/*.tar.gz
             release/*.exe
-            release/*.nsis.7z
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   publish:
     needs: build

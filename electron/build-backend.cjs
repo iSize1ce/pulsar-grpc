@@ -6,8 +6,8 @@ const rootDir = path.resolve(__dirname, '..')
 const outputDir = path.join(rootDir, 'dist')
 const goCacheDir = path.join(rootDir, '.cache', 'go-build')
 const binaryName = process.platform === 'win32'
-  ? 'grpc-explorer-backend.exe'
-  : 'grpc-explorer-backend'
+  ? 'pulsar-grpc-backend.exe'
+  : 'pulsar-grpc-backend'
 
 fs.mkdirSync(outputDir, { recursive: true })
 fs.mkdirSync(goCacheDir, { recursive: true })

@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
-	pb "grpc-explorer/testserver/hello"
+	pb "pulsar-grpc/testserver/hello"
 )
 
 type server struct {

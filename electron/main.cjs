@@ -41,8 +41,8 @@ function getBackendCommand() {
   }
 
   const binaryName = process.platform === 'win32'
-    ? 'grpc-explorer-backend.exe'
-    : 'grpc-explorer-backend'
+    ? 'pulsar-grpc-backend.exe'
+    : 'pulsar-grpc-backend'
   const binaryPath = app.isPackaged
     ? path.join(process.resourcesPath, 'backend', binaryName)
     : path.join(rootDir, 'dist', binaryName)

@@ -1,5 +1,5 @@
 {
-  "name": "grpc-explorer-desktop",
+  "name": "pulsar-grpc",
   "private": true,
   "version": "1.0.0",
   "description": "Pulsar GRPC desktop client",
@@ -40,8 +40,8 @@
         "from": "dist",
         "to": "backend",
         "filter": [
-          "grpc-explorer-backend",
-          "grpc-explorer-backend.exe"
+          "pulsar-grpc-backend",
+          "pulsar-grpc-backend.exe"
         ]
       },
       {
@@ -51,23 +51,14 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": [
-        "dmg",
-        "zip"
-      ]
+      "target": ["dmg"]
     },
     "linux": {
       "category": "Development",
-      "target": [
-        "AppImage",
-        "tar.gz"
-      ]
+      "target": ["AppImage"]
     },
     "win": {
-      "target": [
-        "nsis",
-        "zip"
-      ]
+      "target": ["nsis"]
     }
   }
 }

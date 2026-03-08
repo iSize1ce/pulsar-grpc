@@ -104,7 +104,25 @@ async function startBackend() {
   backendProcess = spawn(backend.command, backend.args, {
     cwd: backend.cwd,
     env: backendEnv,
-    stdio: 'inherit',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  })
+
+  const logToWindows = (line) => {
+    const msg = `[backend] ${line}`
+    for (const win of windows) {
+      if (!win.isDestroyed()) {
+        win.webContents.executeJavaScript(`console.log(${JSON.stringify(msg)})`)
+      }
+    }
+  }
+
+  backendProcess.stdout.on('data', (data) => {
+    for (const line of data.toString().trimEnd().split('\n')) logToWindows(line)
+  })
+
+  backendProcess.stderr.on('data', (data) => {
+    for (const line of data.toString().trimEnd().split('\n')) logToWindows(line)
   })
 
   backendProcess.once('exit', (code, signal) => {

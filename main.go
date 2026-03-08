@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -16,9 +14,6 @@ import (
 	"strings"
 	"syscall"
 )
-
-//go:embed static
-var staticFiles embed.FS
 
 type appConfig struct {
 	port        string
@@ -40,13 +35,6 @@ func main() {
 	mux.HandleFunc("/api/servers", handleServers)
 	mux.HandleFunc("/api/saved-requests", handleSavedRequests)
 	mux.HandleFunc("/api/history", handleHistory)
-
-	// Serve embedded frontend files (static/ directory)
-	staticFS, err := fs.Sub(staticFiles, "static")
-	if err != nil {
-		log.Fatalf("embedded static fs: %v", err)
-	}
-	mux.Handle("/", http.FileServer(http.FS(staticFS)))
 
 	listener, err := listen(cfg.port)
 	if err != nil {

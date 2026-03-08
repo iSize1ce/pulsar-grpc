@@ -141,7 +141,10 @@
 
     // Apply JSON schema on mount in case fields are already loaded (e.g. after hard reload)
     if (methodStore.currentFields.length) {
-      const schema = protoFieldsToJsonSchema(methodStore.currentFields, methodStore.getMessageFields)
+      const schema = protoFieldsToJsonSchema(
+        methodStore.currentFields,
+        methodStore.getMessageFields,
+      )
       ;(schema as any).$schema = 'http://json-schema.org/draft-07/schema#'
       monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
         validate: true,

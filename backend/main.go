@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type appConfig struct {
@@ -21,7 +21,15 @@ type appConfig struct {
 }
 
 func main() {
-	initDB()
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})))
+
+	if err := initDB(); err != nil {
+		slog.Error("initDB", "err", err)
+		os.Exit(1)
+	}
+
 	cfg := loadConfig()
 
 	mux := http.NewServeMux()
@@ -38,34 +46,38 @@ func main() {
 
 	listener, err := listen(cfg.port)
 	if err != nil {
-		log.Fatalf("listen: %v", err)
+		slog.Error("listen", "err", err)
+		os.Exit(1)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	url := fmt.Sprintf("http://127.0.0.1:%d", port)
 
-	srv := &http.Server{Handler: mux}
+	srv := &http.Server{Handler: withRequestID(mux)}
 
-	// Graceful shutdown: wait for SIGINT (Ctrl+C) or SIGTERM, then stop the server
+	// Graceful shutdown: wait for SIGINT/SIGTERM, then stop with a timeout.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down...")
-		if err := srv.Shutdown(context.Background()); err != nil {
-			log.Printf("shutdown error: %v", err)
+		slog.Info("shutting down")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("shutdown", "err", err)
 		}
 	}()
 
-	log.Printf("Listening on %s", url)
+	slog.Info("listening", "url", url)
 	if cfg.openBrowser {
 		openBrowser(url)
 	}
 
 	if err := srv.Serve(listener); err != http.ErrServerClosed {
-		log.Fatalf("serve: %v", err)
+		slog.Error("serve", "err", err)
+		os.Exit(1)
 	}
-	log.Println("Bye!")
+	slog.Info("bye")
 }
 
 func loadConfig() appConfig {
@@ -79,18 +91,15 @@ func listen(port string) (net.Listener, error) {
 	if port != "" {
 		return net.Listen("tcp", "127.0.0.1:"+port)
 	}
-
-	listener, err := net.Listen("tcp", "127.0.0.1:22333")
-	if err == nil {
-		return listener, nil
+	// Try the well-known default port first, fall back to any free port.
+	if l, err := net.Listen("tcp", "127.0.0.1:22333"); err == nil {
+		return l, nil
 	}
-
 	return net.Listen("tcp", "127.0.0.1:0")
 }
 
 func envBool(name string) bool {
-	value := strings.TrimSpace(strings.ToLower(os.Getenv(name)))
-	switch value {
+	switch strings.TrimSpace(strings.ToLower(os.Getenv(name))) {
 	case "1", "true", "yes", "on":
 		return true
 	default:
@@ -99,7 +108,7 @@ func envBool(name string) bool {
 }
 
 // openBrowser launches the default browser with the given URL.
-// Fails silently with a log message if the browser can't be opened.
+// Fails silently — a log message is emitted but the server keeps running.
 func openBrowser(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -111,44 +120,6 @@ func openBrowser(url string) {
 		cmd = exec.Command("xdg-open", url)
 	}
 	if err := cmd.Start(); err != nil {
-		log.Printf("Could not open browser: %v", err)
-		log.Printf("Open %s manually", url)
-	}
-}
-
-// postOnly wraps an HTTP handler to reject anything that's not a POST request.
-func postOnly(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		h(w, r)
-	}
-}
-
-// decodeBody reads the JSON request body into the given struct.
-// Always closes the body when done.
-func decodeBody(r *http.Request, v any) error {
-	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(v)
-}
-
-// respondJSON writes a JSON-encoded response with 200 OK status.
-func respondJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Printf("respondJSON encode error: %v", err)
-	}
-}
-
-// respondError writes a JSON error response with 500 status.
-// The error message is included in {"error": "..."} format.
-func respondError(w http.ResponseWriter, err error) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusInternalServerError)
-	resp := map[string]string{"error": err.Error()}
-	if encErr := json.NewEncoder(w).Encode(resp); encErr != nil {
-		log.Printf("respondError encode error: %v", encErr)
+		slog.Warn("could not open browser", "err", err, "url", url)
 	}
 }

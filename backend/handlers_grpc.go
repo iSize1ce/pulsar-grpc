@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
@@ -36,9 +37,9 @@ const (
 
 // skipServices hides gRPC's own reflection services from the service list,
 // since calling them directly doesn't make sense for end users.
-var skipServices = map[string]bool{
-	"grpc.reflection.v1.ServerReflection":      true,
-	"grpc.reflection.v1alpha.ServerReflection": true,
+var skipServices = map[string]struct{}{
+	"grpc.reflection.v1.ServerReflection":      {},
+	"grpc.reflection.v1alpha.ServerReflection": {},
 }
 
 // handleServices returns the list of gRPC services with their methods.
@@ -61,6 +62,11 @@ func handleServices(w http.ResponseWriter, r *http.Request) {
 
 	session, err := openSession(ctx, req.URL)
 	if err != nil {
+		slog.Warn("handleServices: openSession failed",
+			"url", req.URL,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
 		respondError(w, err)
 		return
 	}
@@ -68,6 +74,11 @@ func handleServices(w http.ResponseWriter, r *http.Request) {
 
 	services, err := session.client.ListServices()
 	if err != nil {
+		slog.Warn("handleServices: ListServices failed",
+			"url", req.URL,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
 		respondError(w, err)
 		return
 	}
@@ -87,12 +98,18 @@ func handleServices(w http.ResponseWriter, r *http.Request) {
 	result := make([]serviceInfo, 0, len(services))
 	for _, svc := range services {
 		name := string(svc)
-		if skipServices[name] {
+		if _, skip := skipServices[name]; skip {
 			continue
 		}
 		si := serviceInfo{Name: name}
 		sd, err := findServiceDesc(session.resolver, name)
-		if err == nil {
+		if err != nil {
+			slog.Warn("handleServices: findServiceDesc failed",
+				"service", name,
+				"request_id", requestID(r.Context()),
+				"err", err,
+			)
+		} else {
 			si.Methods = make([]methodInfo, sd.Methods().Len())
 			for i := range si.Methods {
 				md := sd.Methods().Get(i)
@@ -133,6 +150,13 @@ func handleDescribe(w http.ResponseWriter, r *http.Request) {
 
 	session, err := openSession(ctx, req.URL)
 	if err != nil {
+		slog.Warn("handleDescribe: openSession failed",
+			"url", req.URL,
+			"service", req.Service,
+			"method", req.Method,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
 		respondError(w, err)
 		return
 	}
@@ -140,6 +164,13 @@ func handleDescribe(w http.ResponseWriter, r *http.Request) {
 
 	md, err := resolveMethod(session, req.Service, req.Method)
 	if err != nil {
+		slog.Warn("handleDescribe: resolveMethod failed",
+			"url", req.URL,
+			"service", req.Service,
+			"method", req.Method,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
 		respondError(w, err)
 		return
 	}
@@ -165,7 +196,7 @@ func handleInvoke(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), invokeTimeout)
 	defer cancel()
 
-	// Attach outgoing metadata (gRPC headers) from the request
+	// Attach outgoing metadata (gRPC headers) from the request.
 	outMeta := buildOutgoingMeta(req.Meta)
 	if len(outMeta) > 0 {
 		ctx = metadata.NewOutgoingContext(ctx, outMeta)
@@ -173,6 +204,13 @@ func handleInvoke(w http.ResponseWriter, r *http.Request) {
 
 	session, err := openSession(ctx, req.URL)
 	if err != nil {
+		slog.Warn("handleInvoke: openSession failed",
+			"url", req.URL,
+			"service", req.Service,
+			"method", req.Method,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
 		debug := map[string]any{"url": req.URL, "service": req.Service, "method": req.Method}
 		respondJSON(w, buildErrorResponse(err, debug, nil))
 		return
@@ -181,19 +219,33 @@ func handleInvoke(w http.ResponseWriter, r *http.Request) {
 
 	md, err := resolveMethod(session, req.Service, req.Method)
 	if err != nil {
+		slog.Warn("handleInvoke: resolveMethod failed",
+			"url", req.URL,
+			"service", req.Service,
+			"method", req.Method,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
 		debug := map[string]any{"url": req.URL, "service": req.Service, "method": req.Method}
 		respondJSON(w, buildErrorResponse(err, debug, session.resolver))
 		return
 	}
 
-	// Deserialize the JSON payload into a dynamic protobuf message
+	// Deserialize the JSON payload into a dynamic protobuf message.
 	reqMsg := dynamicpb.NewMessage(md.Input())
 	if err := protojson.Unmarshal(req.Payload, reqMsg); err != nil {
-		respondError(w, err)
+		slog.Warn("handleInvoke: protojson.Unmarshal failed",
+			"url", req.URL,
+			"service", req.Service,
+			"method", req.Method,
+			"request_id", requestID(r.Context()),
+			"err", err,
+		)
+		respondError(w, fmt.Errorf("invalid payload: %w", err))
 		return
 	}
 
-	// Execute the gRPC call and collect response metadata
+	// Execute the gRPC call and collect response metadata.
 	var respHeaders, respTrailers metadata.MD
 	startTime := time.Now()
 
@@ -207,13 +259,19 @@ func handleInvoke(w http.ResponseWriter, r *http.Request) {
 	debug := buildDebugInfo(req.URL, req.Service, req.Method, req.Payload,
 		outMeta, respHeaders, respTrailers, startTime, duration)
 
-	// If the call returned a gRPC error, respond with structured error info
 	if invokeErr != nil {
+		slog.Info("handleInvoke: gRPC error",
+			"url", req.URL,
+			"service", req.Service,
+			"method", req.Method,
+			"duration_ms", duration.Milliseconds(),
+			"request_id", requestID(r.Context()),
+			"err", invokeErr,
+		)
 		respondJSON(w, buildErrorResponse(invokeErr, debug, session.resolver))
 		return
 	}
 
-	// Marshal the successful response to JSON
 	debug["statusCode"] = "OK"
 	protoResp, ok := respMsg.(proto.Message)
 	if !ok {
@@ -223,21 +281,43 @@ func handleInvoke(w http.ResponseWriter, r *http.Request) {
 
 	data, err := marshalProtoMessageOrdered(protoResp.ProtoReflect().Descriptor(), protoResp.ProtoReflect())
 	if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("marshal response: %w", err))
 		return
 	}
 	if b, err := json.Marshal(data); err == nil {
 		debug["responseSize"] = len(b)
 	}
 
+	slog.Info("handleInvoke: ok",
+		"url", req.URL,
+		"service", req.Service,
+		"method", req.Method,
+		"duration_ms", duration.Milliseconds(),
+		"request_id", requestID(r.Context()),
+	)
+
 	type invokeResponse struct {
 		Data  any            `json:"data"`
 		Debug map[string]any `json:"debug"`
 	}
-	respondJSON(w, invokeResponse{
-		Data:  data,
-		Debug: debug,
-	})
+	respondJSON(w, invokeResponse{Data: data, Debug: debug})
+}
+
+// resolveMethod finds a unary method descriptor by service and method name.
+// Returns an error if the method uses streaming (not supported).
+func resolveMethod(session *grpcSession, service, method string) (protoreflect.MethodDescriptor, error) {
+	sd, err := findServiceDesc(session.resolver, service)
+	if err != nil {
+		return nil, err
+	}
+	md, err := findMethodDesc(sd, method)
+	if err != nil {
+		return nil, err
+	}
+	if md.IsStreamingClient() || md.IsStreamingServer() {
+		return nil, fmt.Errorf("streaming methods are not supported")
+	}
+	return md, nil
 }
 
 // ─── handleInvoke helpers ────────────────────────────────────────────────────
@@ -251,9 +331,6 @@ type metaEntry struct {
 // buildOutgoingMeta converts frontend meta entries into gRPC metadata.
 // Entries with empty keys are skipped.
 func buildOutgoingMeta(entries []metaEntry) metadata.MD {
-	if len(entries) == 0 {
-		return nil
-	}
 	pairs := make([]string, 0, len(entries)*2)
 	for _, e := range entries {
 		if e.Key != "" {
@@ -302,7 +379,6 @@ func buildErrorResponse(invokeErr error, debug map[string]any, resolver protores
 	resp["grpcStatus"] = st.Code().String()
 	resp["grpcMessage"] = st.Message()
 
-	// Extract structured error details (e.g. google.rpc.BadRequest, ErrorInfo)
 	protoDetails := st.Proto().GetDetails()
 	if len(protoDetails) == 0 {
 		return resp
@@ -311,14 +387,13 @@ func buildErrorResponse(invokeErr error, debug map[string]any, resolver protores
 	detailsList := make([]any, 0, len(protoDetails))
 	for _, a := range protoDetails {
 		detail := map[string]any{"@type": a.GetTypeUrl()}
-		// Try to marshal the Any to JSON — protojson resolves known types
 		if b, err := protojson.Marshal(a); err == nil {
 			var parsed map[string]any
 			if json.Unmarshal(b, &parsed) == nil {
 				detail = parsed
 			}
 		} else if resolver != nil {
-			// Type not in global registry — try resolving via gRPC reflection
+			// Type not in global registry — try resolving via gRPC reflection.
 			if parsed := resolveAnyViaReflection(a, resolver); parsed != nil {
 				detail = parsed
 			}
@@ -344,12 +419,10 @@ func grpcStatus(err error) *status.Status {
 // resolveAnyViaReflection decodes a protobuf Any using the reflection-based resolver
 // when the type is not in the global registry (e.g. custom server-specific error types).
 func resolveAnyViaReflection(a proto.Message, resolver protoresolve.Resolver) map[string]any {
-	// a is *anypb.Any — extract TypeUrl and Value via protoreflect
 	ref := a.ProtoReflect()
 	typeURL := ref.Get(ref.Descriptor().Fields().ByName("type_url")).String()
 	valueBytes := ref.Get(ref.Descriptor().Fields().ByName("value")).Bytes()
 
-	// Extract full message name from type URL (after last '/')
 	fullName := typeURL
 	if i := strings.LastIndex(typeURL, "/"); i >= 0 {
 		fullName = typeURL[i+1:]
@@ -377,22 +450,20 @@ func resolveAnyViaReflection(a proto.Message, resolver protoresolve.Resolver) ma
 	if json.Unmarshal(b, &parsed) != nil {
 		return nil
 	}
-	// Fix up the JSON: add missing defaults, resolve enums to names, recurse into nested messages
 	fixDynamicJSON(msgDesc, dynMsg.ProtoReflect(), parsed)
 	parsed["@type"] = typeURL
 	return parsed
 }
 
 // fixDynamicJSON patches JSON output from protojson.Marshal on dynamicpb messages:
-// - Adds default values for missing scalar fields (protojson omits zero values)
-// - Resolves enum fields to string names (protojson writes numbers for unregistered enums)
-// - Recurses into nested messages, repeated fields, and map values
+//   - Adds default values for missing scalar fields (protojson omits zero values)
+//   - Resolves enum fields to string names (protojson writes numbers for unregistered enums)
+//   - Recurses into nested messages, repeated fields, and map values
 func fixDynamicJSON(md protoreflect.MessageDescriptor, msg protoreflect.Message, out map[string]any) {
 	for i := 0; i < md.Fields().Len(); i++ {
 		fd := md.Fields().Get(i)
 		name := fd.JSONName()
 
-		// --- Repeated (non-map) fields ---
 		if fd.IsList() {
 			arr, ok := out[name].([]any)
 			if !ok {
@@ -418,7 +489,6 @@ func fixDynamicJSON(md protoreflect.MessageDescriptor, msg protoreflect.Message,
 			continue
 		}
 
-		// --- Map fields ---
 		if fd.IsMap() {
 			m, ok := out[name].(map[string]any)
 			if !ok {
@@ -449,9 +519,6 @@ func fixDynamicJSON(md protoreflect.MessageDescriptor, msg protoreflect.Message,
 			continue
 		}
 
-		// --- Singular fields ---
-
-		// Enum: resolve number to name
 		if fd.Kind() == protoreflect.EnumKind {
 			num := msg.Get(fd).Enum()
 			if ev := fd.Enum().Values().ByNumber(num); ev != nil {
@@ -462,7 +529,6 @@ func fixDynamicJSON(md protoreflect.MessageDescriptor, msg protoreflect.Message,
 			continue
 		}
 
-		// Nested message: recurse if present
 		if fd.Kind() == protoreflect.MessageKind || fd.Kind() == protoreflect.GroupKind {
 			if msg.Has(fd) {
 				if nested, ok := out[name].(map[string]any); ok {
@@ -472,7 +538,6 @@ func fixDynamicJSON(md protoreflect.MessageDescriptor, msg protoreflect.Message,
 			continue
 		}
 
-		// Scalar: add default if missing
 		if _, exists := out[name]; exists {
 			continue
 		}
@@ -488,6 +553,28 @@ func fixDynamicJSON(md protoreflect.MessageDescriptor, msg protoreflect.Message,
 		}
 	}
 }
+
+// metadataToMap converts gRPC metadata into a plain map for JSON serialization.
+// Single-value keys are stored as strings; multi-value keys as string arrays.
+func metadataToMap(md metadata.MD) map[string]any {
+	result := make(map[string]any, len(md))
+	for k, vals := range md {
+		if len(vals) == 1 {
+			result[k] = vals[0]
+		} else {
+			result[k] = vals
+		}
+	}
+	return result
+}
+
+// ─── Ordered JSON serialization ──────────────────────────────────────────────
+//
+// protojson emits fields in descriptor order and proto3 default values are
+// omitted. We re-implement serialization to:
+//   - preserve the proto field order (important for UX consistency)
+//   - always emit explicit defaults for every field
+//   - represent int64/uint64 as decimal strings (JSON number limits)
 
 type orderedField struct {
 	key   string
@@ -539,7 +626,7 @@ func marshalProtoMessageOrdered(md protoreflect.MessageDescriptor, msg protorefl
 			err   error
 		)
 
-		// Proto3 optional (synthetic oneof) that's not present -> explicit null.
+		// Proto3 optional (synthetic oneof) that's not present → explicit null.
 		if od != nil && od.IsSynthetic() && !has {
 			value = nil
 		} else if has {
@@ -551,10 +638,7 @@ func marshalProtoMessageOrdered(md protoreflect.MessageDescriptor, msg protorefl
 			return nil, err
 		}
 
-		ordered = append(ordered, orderedField{
-			key:   fd.JSONName(),
-			value: value,
-		})
+		ordered = append(ordered, orderedField{key: fd.JSONName(), value: value})
 	}
 	return ordered, nil
 }
@@ -563,7 +647,7 @@ func presentFieldJSONValue(fd protoreflect.FieldDescriptor, v protoreflect.Value
 	if fd.IsList() {
 		list := v.List()
 		out := make([]any, list.Len())
-		for i := 0; i < list.Len(); i++ {
+		for i := range out {
 			elem, err := scalarOrMessageJSONValue(fd, list.Get(i), true)
 			if err != nil {
 				return nil, err
@@ -684,9 +768,6 @@ func scalarJSONValue(fd protoreflect.FieldDescriptor, v protoreflect.Value, list
 		if ev := fd.Enum().Values().ByNumber(num); ev != nil {
 			return string(ev.Name())
 		}
-		if listElem {
-			return int32(num)
-		}
 		return int32(num)
 	default:
 		return nil
@@ -747,239 +828,4 @@ func isWellKnownJSONType(md protoreflect.MessageDescriptor) bool {
 	default:
 		return false
 	}
-}
-
-// metadataToMap converts gRPC metadata into a plain map for JSON serialization.
-// Single-value keys are stored as strings; multi-value keys as string arrays.
-func metadataToMap(md metadata.MD) map[string]any {
-	result := make(map[string]any, len(md))
-	for k, vals := range md {
-		if len(vals) == 1 {
-			result[k] = vals[0]
-		} else {
-			result[k] = vals
-		}
-	}
-	return result
-}
-
-// ─── CRUD endpoints ──────────────────────────────────────────────────────────
-
-// handleServers dispatches GET/POST/PUT/DELETE for server management.
-func handleServers(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		q := r.URL.Query().Get("q")
-		servers, err := searchServers(q)
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, servers)
-
-	case http.MethodPost:
-		var req struct {
-			URL  string `json:"url"`
-			Name string `json:"name"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if req.URL == "" {
-			http.Error(w, `{"error":"url is required"}`, http.StatusBadRequest)
-			return
-		}
-		srv, err := createServer(req.URL, req.Name)
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, srv)
-
-	case http.MethodPut:
-		var req struct {
-			ID   int64  `json:"id"`
-			Meta string `json:"meta"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := updateServerMeta(req.ID, req.Meta); err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, map[string]bool{"ok": true})
-
-	case http.MethodDelete:
-		var req struct {
-			ID int64 `json:"id"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := deleteServer(req.ID); err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, map[string]bool{"ok": true})
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// handleSavedRequests dispatches GET/POST/DELETE for saved request management.
-func handleSavedRequests(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		q := r.URL.Query().Get("q")
-		method := r.URL.Query().Get("method")
-		items, err := searchSavedRequests(q, method)
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, items)
-
-	case http.MethodPost:
-		var req struct {
-			Name     string `json:"name"`
-			ServerID int64  `json:"server_id"`
-			Method   string `json:"method"`
-			Payload  string `json:"payload"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if req.ServerID == 0 || req.Method == "" {
-			http.Error(w, `{"error":"server_id and method are required"}`, http.StatusBadRequest)
-			return
-		}
-		item, err := createSavedRequest(req.Name, req.ServerID, req.Method, req.Payload)
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, item)
-
-	case http.MethodPut:
-		var req struct {
-			ID       int64  `json:"id"`
-			ServerID int64  `json:"server_id"`
-			Method   string `json:"method"`
-			Payload  string `json:"payload"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := updateSavedRequest(req.ID, req.ServerID, req.Method, req.Payload); err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, map[string]bool{"ok": true})
-
-	case http.MethodDelete:
-		var req struct {
-			ID int64 `json:"id"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := deleteSavedRequest(req.ID); err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, map[string]bool{"ok": true})
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// handleHistory dispatches GET/POST/DELETE for request history.
-func handleHistory(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		q := r.URL.Query().Get("q")
-		method := r.URL.Query().Get("method")
-		items, err := searchHistory(q, method)
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, items)
-
-	case http.MethodPost:
-		var req struct {
-			ServerID   int64  `json:"server_id"`
-			Method     string `json:"method"`
-			Payload    string `json:"payload"`
-			Response   string `json:"response"`
-			StatusCode int    `json:"status_code"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if req.ServerID == 0 || req.Method == "" {
-			http.Error(w, `{"error":"server_id and method are required"}`, http.StatusBadRequest)
-			return
-		}
-		item, err := createHistoryEntry(req.ServerID, req.Method, req.Payload, req.Response, req.StatusCode)
-		if err != nil {
-			respondError(w, err)
-			return
-		}
-		respondJSON(w, item)
-
-	case http.MethodDelete:
-		var req struct {
-			ID  int64 `json:"id"`
-			All bool  `json:"all"`
-		}
-		if err := decodeBody(r, &req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if req.All {
-			if err := clearHistory(); err != nil {
-				respondError(w, err)
-				return
-			}
-		} else {
-			if err := deleteHistoryEntry(req.ID); err != nil {
-				respondError(w, err)
-				return
-			}
-		}
-		respondJSON(w, map[string]bool{"ok": true})
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// ─── Method resolution ───────────────────────────────────────────────────────
-
-// resolveMethod finds a unary method descriptor by service and method name.
-// Returns an error if the method uses streaming (not supported).
-func resolveMethod(session *grpcSession, service, method string) (protoreflect.MethodDescriptor, error) {
-	sd, err := findServiceDesc(session.resolver, service)
-	if err != nil {
-		return nil, err
-	}
-	md, err := findMethodDesc(sd, method)
-	if err != nil {
-		return nil, err
-	}
-	if md.IsStreamingClient() || md.IsStreamingServer() {
-		return nil, fmt.Errorf("streaming methods are not supported")
-	}
-	return md, nil
 }

@@ -200,8 +200,8 @@
       let forceEditorSync = false
       await nextTick()
       if (payloadFormRef.value) {
+        payloadFormRef.value.resetForm()
         if (payload.savedPayload) {
-          payloadFormRef.value.resetForm()
           payload.filling = true
           payloadFormRef.value.fillForm(payload.savedPayload)
           payload.savedPayload = null

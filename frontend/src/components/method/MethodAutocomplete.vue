@@ -10,6 +10,7 @@
   const inputValue = ref('')
   const dropdownOpen = ref(false)
   const acActiveIdx = ref(-1)
+  const inputRef = ref<HTMLInputElement | null>(null)
 
   // Sync input when method changes externally (restore from URL, saved requests, history)
   watch(
@@ -80,6 +81,7 @@
     dropdownOpen.value = false
     acActiveIdx.value = -1
     ui.closePopover('methodHistory')
+    inputRef.value?.blur()
 
     if (value !== currentVal) {
       const sep = value.indexOf('::')
@@ -144,6 +146,7 @@
   <div class="autocomplete-wrap">
     <input
       id="serviceMethodInput"
+      ref="inputRef"
       type="text"
       :placeholder="
         methodStore.loading

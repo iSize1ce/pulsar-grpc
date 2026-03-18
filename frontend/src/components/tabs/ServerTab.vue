@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, inject } from 'vue'
+  import { ref, inject, nextTick, watch } from 'vue'
   import { useServersStore } from '@/stores/servers'
   import { useConnectionStore } from '@/stores/connection'
   import { useMethodStore } from '@/stores/method'
@@ -15,6 +15,15 @@
   const ui = useUiStore()
 
   const saveState = inject<() => void>('saveState', () => {})
+  const serverListRef = ref<HTMLElement | null>(null)
+  let needScrollToSelected = false
+
+  watch(() => ui.activeTab, async (tab) => {
+    if (tab === 'tab-server' && needScrollToSelected) {
+      needScrollToSelected = false
+      await scrollToSelectedServer()
+    }
+  })
 
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -29,6 +38,21 @@
     searchTimer = setTimeout(() => servers.loadServers(q), 200)
   }
 
+  async function scrollToSelectedServer() {
+    await nextTick()
+    const container = serverListRef.value
+    if (!container) return
+    const activeItem = container.querySelector<HTMLElement>('.records-item.active')
+    if (!activeItem) return
+    const containerRect = container.getBoundingClientRect()
+    const itemRect = activeItem.getBoundingClientRect()
+    if (itemRect.top < containerRect.top) {
+      container.scrollTop += itemRect.top - containerRect.top
+    } else if (itemRect.bottom > containerRect.bottom) {
+      container.scrollTop += itemRect.bottom - containerRect.bottom
+    }
+  }
+
   async function selectServer(srv: Server) {
     if (srv.id === conn.currentServerId) {
       await method.loadServices('', true)
@@ -37,12 +61,14 @@
 
     conn.saveCurrentServerMeta(true)
     conn.selectServerData(srv)
+
     const loaded = await method.loadServices()
     if (!loaded) return
 
     if (servers.searchQuery) {
       servers.searchQuery = ''
       await servers.loadServers()
+      needScrollToSelected = true
     }
 
     saveState()
@@ -146,7 +172,7 @@
         </div>
       </div>
 
-      <div id="serverList" class="records-list">
+      <div id="serverList" ref="serverListRef" class="records-list">
         <div v-if="!servers.servers.length" class="records-empty">No servers</div>
         <RecordsListItem
           v-for="srv in servers.servers"

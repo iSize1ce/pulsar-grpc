@@ -58,13 +58,13 @@ export const useMethodStore = defineStore(
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async function loadServices(initialMethod = '', keepForm = false): Promise<void> {
+    async function loadServices(initialMethod = '', keepForm = false): Promise<boolean> {
       const conn = useConnectionStore()
       const ui = useUiStore()
 
       if (!conn.grpcUrl) {
         ui.showStatus('Enter URL', true)
-        return
+        return false
       }
 
       if (!keepForm) {
@@ -92,8 +92,10 @@ export const useMethodStore = defineStore(
         if (!keepForm) {
           ui.activateTab('tab-fields')
         }
+        return true
       } catch (e: any) {
         ui.showStatus(`Error: ${e.message}`, true)
+        return false
       } finally {
         loading.value = false
       }

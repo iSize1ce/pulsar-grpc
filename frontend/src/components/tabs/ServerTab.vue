@@ -37,13 +37,14 @@
 
     conn.saveCurrentServerMeta(true)
     conn.selectServerData(srv)
+    const loaded = await method.loadServices()
+    if (!loaded) return
 
     if (servers.searchQuery) {
       servers.searchQuery = ''
-      servers.loadServers()
+      await servers.loadServers()
     }
 
-    await method.loadServices()
     saveState()
   }
 

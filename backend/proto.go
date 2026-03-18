@@ -23,7 +23,7 @@ func describeMessage(md protoreflect.MessageDescriptor) []map[string]any {
 // typeCount tracks how many times each message type has appeared on the current
 // ancestor path, so we can stop at maxRecursiveDepth.
 func describeMessageOnPath(md protoreflect.MessageDescriptor, typeCount map[protoreflect.FullName]int) []map[string]any {
-	var fields []map[string]any
+	fields := make([]map[string]any, 0)
 	seen := make(map[protoreflect.Name]bool) // tracks oneofs already emitted
 
 	for i := 0; i < md.Fields().Len(); i++ {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import StartTrimText from '@/components/shared/StartTrimText.vue'
+
   defineProps<{
     title: string
     subtitle?: string
@@ -21,7 +23,8 @@
       <div class="records-item-title">
         <span v-if="statusClass" class="history-status-dot" :class="statusClass" />
         <span class="records-item-title-text" :class="{ 'trim-start': titleTrimStart }">
-          <span class="records-item-title-text-inner">{{ title }}</span>
+          <StartTrimText v-if="titleTrimStart" :text="title" />
+          <span v-else class="records-item-title-text-inner">{{ title }}</span>
         </span>
       </div>
       <div v-if="metaLeft || metaRight" class="records-item-meta">

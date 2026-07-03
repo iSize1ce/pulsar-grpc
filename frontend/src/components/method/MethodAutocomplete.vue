@@ -3,6 +3,7 @@
   import { useMethodStore } from '@/stores/method'
   import { useUiStore } from '@/stores/ui'
   import { convertLayout } from '@/utils/layoutConvert'
+  import StartTrimText from '@/components/shared/StartTrimText.vue'
 
   const methodStore = useMethodStore()
   const ui = useUiStore()
@@ -166,10 +167,9 @@
     <div
       v-if="selectedDisplayValue"
       class="method-selected-display"
-      :title="selectedDisplayValue"
       @click="focusInput"
     >
-      <span class="method-selected-display-text">{{ selectedDisplayValue }}</span>
+      <StartTrimText :text="selectedDisplayValue" />
     </div>
     <input
       id="serviceMethodInput"

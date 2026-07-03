@@ -597,7 +597,6 @@ input::placeholder {
 .method-selected-display {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   width: 100%;
   height: var(--input-row-control-size);
   padding: 8px 12px;
@@ -611,9 +610,8 @@ input::placeholder {
   user-select: none;
 }
 
-.method-selected-display-text {
-  flex: 0 0 auto;
-  white-space: nowrap;
+.method-selected-display .start-trim-text {
+  width: 100%;
 }
 
 #serviceMethodInput.method-input-hidden {
@@ -1464,18 +1462,24 @@ select {
   text-overflow: ellipsis;
 }
 
+.start-trim-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.start-trim-text-content {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .records-item-title-text-inner {
   white-space: nowrap;
 }
 
 .records-item-title-text.trim-start {
-  display: flex;
-  justify-content: flex-end;
   text-overflow: clip;
-}
-
-.records-item-title-text.trim-start .records-item-title-text-inner {
-  flex: 0 0 auto;
 }
 
 .records-item-subtitle {

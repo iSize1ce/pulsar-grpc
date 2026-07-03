@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { reactive } from 'vue'
-  import type { ProtoField } from '@/types/proto'
+  import type { MapComponent, ProtoField } from '@/types/proto'
   import { toCamelCase } from '@/utils/camelCase'
   import { parseFieldVal, zeroVal, oneofDefaultValue } from '@/utils/parseValue'
   import {
@@ -97,7 +97,41 @@
       const parsed = parseFieldVal(v, f)
       if (parsed !== undefined && parsed !== zeroVal(f.type)) obj[jsonKey] = parsed
     }
+    return withFlatDefaultsIfEmpty(obj, ff)
+  }
+
+  function withFlatDefaultsIfEmpty(
+    obj: Record<string, any>,
+    fields: ProtoField[],
+  ): Record<string, any> {
+    if (Object.keys(obj).length || !fields.length) return obj
+    return collectFlatDefaultPayload(fields)
+  }
+
+  function collectFlatDefaultPayload(fields: ProtoField[]): Record<string, any> {
+    const obj: Record<string, any> = {}
+    for (const f of fields) {
+      if (f.type === 'oneof') continue
+      obj[toCamelCase(f.name)] = defaultFieldValue(f)
+    }
     return obj
+  }
+
+  function defaultFieldValue(f: ProtoField | MapComponent): any {
+    const wkt = wktScalarCfg(f)
+    if (wkt) {
+      if (wkt.kind === 'jsonArray') return []
+      if (wkt.kind === 'jsonObject' || wkt.kind === 'jsonValue') return null
+      return zeroVal(wkt.kind)
+    }
+
+    if ('repeated' in f && f.repeated) return []
+    if (f.type === 'map' || f.type === 'message') return null
+    if (f.type === 'enum') {
+      const values = ('enumValues' in f ? f.enumValues : undefined) || []
+      return values.find((v) => v.number === 0)?.name || values[0]?.name || ''
+    }
+    return zeroVal(f.type)
   }
 
   function collectOneofPayload(obj: Record<string, any>, f: ProtoField, id: string, depth: number) {

@@ -62,7 +62,7 @@
     if (payloadFormRef.value) {
       payloadFormRef.value.resetForm()
     }
-    cacheRequestPayload({}, true)
+    refreshRequestPayloadCache(true)
   }
 
   // Expose for parent

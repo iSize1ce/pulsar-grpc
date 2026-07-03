@@ -197,7 +197,9 @@
     () => methodStore.currentFields,
     async () => {
       if (!methodStore.currentFields.length) return
-      let forceEditorSync = false
+      // When the method schema changes we want JSON mode to reflect the new method immediately,
+      // instead of keeping the previous method payload in the editor.
+      let forceEditorSync = payload.jsonMode
       await nextTick()
       if (payloadFormRef.value) {
         payloadFormRef.value.resetForm()

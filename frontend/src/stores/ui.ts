@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type TabId = 'tab-server' | 'tab-saved' | 'tab-history' | 'tab-fields'
+export type TabId = 'tab-saved' | 'tab-history' | 'tab-fields'
+
+sanitizePersistedActiveTab()
 
 export const useUiStore = defineStore(
   'ui',
   () => {
-    const activeTab = ref<TabId>('tab-server')
+    const activeTab = ref<TabId>('tab-fields')
     const theme = ref<'dark' | 'light'>(
       localStorage.getItem('theme') !== 'light' ? 'dark' : 'light',
     )
@@ -73,3 +75,20 @@ export const useUiStore = defineStore(
     },
   },
 )
+
+function sanitizePersistedActiveTab() {
+  if (typeof localStorage === 'undefined') return
+
+  const raw = localStorage.getItem('ui')
+  if (!raw) return
+
+  try {
+    const persisted = JSON.parse(raw)
+    if (!persisted || typeof persisted !== 'object') return
+    if (persisted.activeTab !== 'tab-server') return
+    persisted.activeTab = 'tab-fields'
+    localStorage.setItem('ui', JSON.stringify(persisted))
+  } catch {
+    /* Ignore malformed persisted state; Pinia will fall back to defaults. */
+  }
+}

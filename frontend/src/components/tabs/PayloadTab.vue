@@ -7,6 +7,9 @@
   import { protoFieldsToJsonSchema } from '@/utils/jsonSchema'
   import MethodAutocomplete from '@/components/method/MethodAutocomplete.vue'
   import MethodHistoryPopover from '@/components/method/MethodHistoryPopover.vue'
+  import ServerAutocomplete from '@/components/server/ServerAutocomplete.vue'
+  import AddServerPopover from '@/components/server/AddServerPopover.vue'
+  import ServerMetadataPopover from '@/components/server/ServerMetadataPopover.vue'
   import PayloadForm from '@/components/form/PayloadForm.vue'
   import type * as Monaco from 'monaco-editor'
 
@@ -260,7 +263,7 @@
   }
 
   const hasFields = computed(() => methodStore.currentFields.length > 0)
-  const hasConnection = computed(() => !!conn.grpcUrl && methodStore.allMethods.length > 0)
+  const hasServer = computed(() => !!conn.grpcUrl || !!conn.currentServerId)
 </script>
 
 <template>
@@ -270,11 +273,28 @@
     data-payload-tab
     :class="{ 'json-active': payload.jsonMode && hasFields }"
   >
-    <div v-show="!hasConnection" class="payload-empty">
-      Select a <a href="#" @click.prevent="ui.activateTab('tab-server')">server</a>
+    <div id="serverSelectSection" class="section selector-section">
+      <label>Server</label>
+      <div class="method-controls">
+        <ServerAutocomplete />
+        <ServerMetadataPopover />
+        <AddServerPopover />
+      </div>
+      <div
+        v-show="ui.statusMessage"
+        id="connectStatus"
+        class="status"
+        :class="{ error: ui.statusIsError, success: !ui.statusIsError }"
+      >
+        {{ ui.statusMessage }}
+      </div>
     </div>
 
-    <div v-show="hasConnection" id="serviceMethodSection" class="section">
+    <div v-show="!hasServer" class="payload-empty">
+      Select a server
+    </div>
+
+    <div v-show="hasServer" id="serviceMethodSection" class="section selector-section">
       <label>Method</label>
       <div class="method-controls">
         <MethodAutocomplete />

@@ -181,7 +181,7 @@
       await nextTick()
       if (historyListRef.value) historyListRef.value.scrollTop = 0
     }
-    ui.activateTab('tab-server')
+    ui.activateTab('tab-fields')
     await method.loadServices(item.method)
     if (item.method && method.allMethods.some((m) => m.value === item.method)) {
       method.selectMethod(item.method)

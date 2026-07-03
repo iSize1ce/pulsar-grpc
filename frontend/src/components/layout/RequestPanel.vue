@@ -9,7 +9,6 @@
   import { usePayloadStore } from '@/stores/payload'
   import { useResponseStore } from '@/stores/response'
   import { invokeMethod } from '@/api/endpoints'
-  import ServerTab from '@/components/tabs/ServerTab.vue'
   import SavedRequestsTab from '@/components/tabs/SavedRequestsTab.vue'
   import HistoryTab from '@/components/tabs/HistoryTab.vue'
   import PayloadTab from '@/components/tabs/PayloadTab.vue'
@@ -28,10 +27,9 @@
   const payloadTabRef = ref<InstanceType<typeof PayloadTab> | null>(null)
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'tab-server', label: 'Server' },
+    { id: 'tab-fields', label: 'Payload' },
     { id: 'tab-saved', label: 'Saved Requests' },
     { id: 'tab-history', label: 'History' },
-    { id: 'tab-fields', label: 'Payload' },
   ]
 
   function getPayload(): Record<string, any> {
@@ -206,10 +204,9 @@
       </div>
     </div>
 
-    <ServerTab v-show="ui.activeTab === 'tab-server'" />
+    <PayloadTab v-show="ui.activeTab === 'tab-fields'" ref="payloadTabRef" />
     <SavedRequestsTab v-show="ui.activeTab === 'tab-saved'" />
     <HistoryTab v-show="ui.activeTab === 'tab-history'" />
-    <PayloadTab v-show="ui.activeTab === 'tab-fields'" ref="payloadTabRef" />
 
     <div class="panel-footer">
       <button id="btnClear" @click="onClear">Clear</button>

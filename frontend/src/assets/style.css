@@ -568,13 +568,18 @@ input::placeholder {
   color: var(--text-placeholder);
 }
 
-/* ─── Method autocomplete ────────────────────────────────────────────────── */
+/* ─── Selector autocomplete ──────────────────────────────────────────────── */
 
+#serverSelectSection,
 #serviceMethodSection {
   position: relative;
   margin-bottom: 16px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
+}
+
+.selector-section {
+  flex-shrink: 0;
 }
 
 .method-controls {
@@ -590,6 +595,7 @@ input::placeholder {
   min-width: 0;
 }
 
+#serverInput,
 #serviceMethodInput {
   height: var(--input-row-control-size);
 }
@@ -614,6 +620,7 @@ input::placeholder {
   width: 100%;
 }
 
+#serverInput.method-input-hidden,
 #serviceMethodInput.method-input-hidden {
   position: absolute;
   inset: 0;
@@ -731,14 +738,36 @@ input::placeholder {
 }
 
 .add-server-popover {
-  left: 0;
-  width: auto;
+  left: auto;
+  width: 260px;
   max-height: none;
   overflow: visible;
 }
 
 .add-server-popover input {
   width: 100%;
+}
+
+.add-server-popover input + input,
+.add-server-popover .row {
+  margin-top: 8px;
+}
+
+.server-metadata-popover {
+  width: 480px;
+  max-height: min(360px, calc(100vh - 160px));
+}
+
+.metadata-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.metadata-popover-header .method-history-title {
+  margin-bottom: 0;
 }
 
 .method-history-section + .method-history-section {

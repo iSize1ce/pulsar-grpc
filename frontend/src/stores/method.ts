@@ -73,13 +73,11 @@ export const useMethodStore = defineStore(
         currentFields.value = []
       }
 
-      ui.showStatus('Loading...', false)
       allMethods.value = []
       loading.value = true
 
       try {
         const services = await api.fetchServices(conn.grpcUrl)
-        ui.showStatus(`Connected. Services: ${services.length}`, false)
 
         allMethods.value = []
         for (const { name: svc, methods } of services) {

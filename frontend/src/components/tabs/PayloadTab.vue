@@ -281,7 +281,7 @@
         <AddServerPopover />
       </div>
       <div
-        v-show="ui.statusMessage"
+        v-show="ui.statusMessage && ui.statusIsError"
         id="connectStatus"
         class="status"
         :class="{ error: ui.statusIsError, success: !ui.statusIsError }"

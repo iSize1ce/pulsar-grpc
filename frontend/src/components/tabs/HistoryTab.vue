@@ -219,6 +219,7 @@
         <div v-for="item in historyStore.history" :key="item.id" :data-history-id="item.id">
           <RecordsListItem
             :title="item.method || ''"
+            title-trim-start
             :meta-left="item.server_name || item.server_url || ''"
             :meta-right="formatHistoryDateTime(item.created_at)"
             :status-class="item.status_code === 0 ? 'ok' : 'err'"

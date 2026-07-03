@@ -114,6 +114,7 @@
           v-for="item in historyItems"
           :key="item.id"
           :title="item.method || ''"
+          title-trim-start
           :meta-left="item.server_name || item.server_url || `Server #${item.server_id}`"
           :meta-right="formatHistoryDateTime(item.created_at)"
           :status-class="item.status_code === 0 ? 'ok' : 'err'"

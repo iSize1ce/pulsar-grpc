@@ -11,6 +11,7 @@
   const dropdownOpen = ref(false)
   const acActiveIdx = ref(-1)
   const inputRef = ref<HTMLInputElement | null>(null)
+  const isFocused = ref(false)
 
   // Sync input when method changes externally (restore from URL, saved requests, history)
   watch(
@@ -46,6 +47,7 @@
   })
 
   function onFocus() {
+    isFocused.value = true
     const selected = methodStore.currentMethodValue
     methodInputRestoreValue = selected
     if (inputValue.value === selected) {
@@ -65,6 +67,7 @@
 
   function onBlur() {
     setTimeout(() => {
+      isFocused.value = false
       dropdownOpen.value = false
       acActiveIdx.value = -1
       const selected = methodStore.currentMethodValue
@@ -72,6 +75,14 @@
       methodInputRestoreValue = ''
     }, 150)
   }
+
+  function focusInput() {
+    inputRef.value?.focus()
+  }
+
+  const selectedDisplayValue = computed(() =>
+    !isFocused.value && !dropdownOpen.value ? methodStore.currentMethodValue : '',
+  )
 
   async function selectMethod(value: string) {
     if (!value) return
@@ -152,6 +163,14 @@
 
 <template>
   <div class="autocomplete-wrap">
+    <div
+      v-if="selectedDisplayValue"
+      class="method-selected-display"
+      :title="selectedDisplayValue"
+      @click="focusInput"
+    >
+      <span class="method-selected-display-text">{{ selectedDisplayValue }}</span>
+    </div>
     <input
       id="serviceMethodInput"
       ref="inputRef"
@@ -164,6 +183,7 @@
             : 'No services'
       "
       :value="inputValue"
+      :class="{ 'method-input-hidden': !!selectedDisplayValue }"
       autocomplete="off"
       @focus="onFocus"
       @input="onInput"

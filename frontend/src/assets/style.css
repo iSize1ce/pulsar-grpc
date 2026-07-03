@@ -594,6 +594,35 @@ input::placeholder {
   height: var(--input-row-control-size);
 }
 
+.method-selected-display {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: var(--input-row-control-size);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  line-height: calc(var(--input-row-control-size) - 18px);
+  overflow: hidden;
+  cursor: text;
+  user-select: none;
+}
+
+.method-selected-display-text {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+#serviceMethodInput.method-input-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .autocomplete-dropdown {
   display: none;
   position: absolute;
@@ -1417,12 +1446,36 @@ select {
 }
 
 .records-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+.records-item-title-text {
+  flex: 1;
+  min-width: 0;
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.records-item-title-text-inner {
+  white-space: nowrap;
+}
+
+.records-item-title-text.trim-start {
+  display: flex;
+  justify-content: flex-end;
+  text-overflow: clip;
+}
+
+.records-item-title-text.trim-start .records-item-title-text-inner {
+  flex: 0 0 auto;
 }
 
 .records-item-subtitle {

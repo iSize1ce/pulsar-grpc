@@ -6,6 +6,7 @@
     metaRight?: string
     statusClass?: string
     active?: boolean
+    titleTrimStart?: boolean
   }>()
 
   const emit = defineEmits<{
@@ -19,7 +20,9 @@
     <div class="records-item-content">
       <div class="records-item-title">
         <span v-if="statusClass" class="history-status-dot" :class="statusClass" />
-        {{ title }}
+        <span class="records-item-title-text" :class="{ 'trim-start': titleTrimStart }">
+          <span class="records-item-title-text-inner">{{ title }}</span>
+        </span>
       </div>
       <div v-if="metaLeft || metaRight" class="records-item-meta">
         <div v-if="metaLeft" class="records-item-subtitle">

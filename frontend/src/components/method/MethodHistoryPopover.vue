@@ -111,7 +111,7 @@
 
     <div v-show="ui.isPopoverOpen('methodHistory')" class="method-history-popover" @click.stop>
       <div class="method-history-section">
-        <div class="method-history-title">Saved Requests</div>
+        <div class="method-history-title">Saved</div>
         <div class="records-list">
           <div v-if="loading" class="records-empty">Loading...</div>
           <div v-else-if="!savedItems.length" class="records-empty">

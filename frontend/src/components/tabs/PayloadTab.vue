@@ -295,7 +295,7 @@
     </div>
 
     <div v-show="hasServer" id="serviceMethodSection" class="section selector-section">
-      <label>Method</label>
+      <label>Request</label>
       <div class="method-controls">
         <MethodAutocomplete />
       </div>

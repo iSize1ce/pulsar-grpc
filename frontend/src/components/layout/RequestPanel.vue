@@ -27,8 +27,8 @@
   const payloadTabRef = ref<InstanceType<typeof PayloadTab> | null>(null)
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'tab-fields', label: 'Payload' },
-    { id: 'tab-saved', label: 'Saved Requests' },
+    { id: 'tab-fields', label: 'Request' },
+    { id: 'tab-saved', label: 'Saved' },
     { id: 'tab-history', label: 'History' },
   ]
 

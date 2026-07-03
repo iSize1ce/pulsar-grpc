@@ -225,7 +225,7 @@
     if (payload.jsonMode === mode) return
     payload.setJsonMode(mode)
     if (mode) {
-      if (requestEditor.value) setRequestEditorValue(payload.requestPayloadCache)
+      refreshRequestPayloadCache(true)
       jsonError.value = ''
       if (requestEditor.value) requestEditor.value.layout()
     } else {
@@ -290,9 +290,7 @@
       </div>
     </div>
 
-    <div v-show="!hasServer" class="payload-empty">
-      Select a server
-    </div>
+    <div v-show="!hasServer" class="payload-empty">Select a server</div>
 
     <div v-show="hasServer" id="serviceMethodSection" class="section selector-section">
       <label>Request</label>

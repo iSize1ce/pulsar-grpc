@@ -143,7 +143,6 @@
 
     if (f.type === 'message' && !isWktScalarField(f)) {
       const msgFields = methodStore.getMessageFields(f)
-      if (!msgFields.length) return
       const vals = state.items.map((idx) => collectPayload(msgFields, `${id}_${idx}`, depth + 1))
       if (vals.length) obj[jsonKey] = vals
       return
@@ -276,7 +275,6 @@
 
     if (f.type === 'message' && !isWktScalarField(f)) {
       const msgFields = methodStore.getMessageFields(f)
-      if (!msgFields.length) return
       for (const item of val) {
         const idx = repeatedState[id].counter++
         repeatedState[id].items.push(idx)

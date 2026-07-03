@@ -43,6 +43,7 @@
     ensureState()
     const idx = repeatedState[props.fieldId].counter++
     repeatedState[props.fieldId].items.push(idx)
+    onFormChange()
   }
 
   function removeItem(idx: number) {

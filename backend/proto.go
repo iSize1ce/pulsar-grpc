@@ -170,3 +170,11 @@ func isFieldDeprecated(fd protoreflect.FieldDescriptor) bool {
 	return opts.GetDeprecated()
 }
 
+// isMethodDeprecated checks the proto method options for the deprecated flag.
+func isMethodDeprecated(md protoreflect.MethodDescriptor) bool {
+	opts, ok := md.Options().(*descriptorpb.MethodOptions)
+	if !ok || opts == nil {
+		return false
+	}
+	return opts.GetDeprecated()
+}

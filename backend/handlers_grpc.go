@@ -89,6 +89,7 @@ func handleServices(w http.ResponseWriter, r *http.Request) {
 		Output          string `json:"output"`
 		ClientStreaming bool   `json:"clientStreaming"`
 		ServerStreaming bool   `json:"serverStreaming"`
+		Deprecated      bool   `json:"deprecated"`
 	}
 	type serviceInfo struct {
 		Name    string       `json:"name"`
@@ -119,6 +120,7 @@ func handleServices(w http.ResponseWriter, r *http.Request) {
 					Output:          string(md.Output().FullName()),
 					ClientStreaming: md.IsStreamingClient(),
 					ServerStreaming: md.IsStreamingServer(),
+					Deprecated:      isMethodDeprecated(md),
 				}
 			}
 		}

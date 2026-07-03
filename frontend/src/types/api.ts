@@ -65,12 +65,14 @@ export interface MethodInfo {
   output: string
   clientStreaming: boolean
   serverStreaming: boolean
+  deprecated?: boolean
 }
 
 export interface MethodEntry {
   svc: string
   name: string
   value: string
+  deprecated?: boolean
 }
 
 export interface InvokeResponse {

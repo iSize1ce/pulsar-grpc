@@ -28,7 +28,7 @@
   const grouped = computed(() => {
     const q = inputValue.value.toLowerCase()
     const qAlt = q ? convertLayout(q) : ''
-    const groups: Record<string, { name: string; value: string }[]> = {}
+    const groups: Record<string, { name: string; value: string; deprecated?: boolean }[]> = {}
 
     for (const m of methodStore.allMethods) {
       const lower = m.value.toLowerCase()
@@ -40,7 +40,7 @@
   })
 
   const flatItems = computed(() => {
-    const items: { name: string; value: string }[] = []
+    const items: { name: string; value: string; deprecated?: boolean }[] = []
     for (const svc of Object.keys(grouped.value)) {
       items.push(...grouped.value[svc])
     }
@@ -204,7 +204,10 @@
           @mousedown="onMousedownItem"
           @mouseup.left="selectMethod(m.value)"
         >
-          {{ m.name }}
+          <span class="autocomplete-item-text" :class="{ deprecated: m.deprecated }">
+            {{ m.name }}
+          </span>
+          <span v-if="m.deprecated" class="badge-deprecated">deprecated</span>
         </div>
       </template>
       <div v-if="flatItems.length === 0" class="autocomplete-empty">No methods found</div>

@@ -604,11 +604,14 @@ input::placeholder {
   width: 100%;
   height: var(--input-row-control-size);
   padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg-input);
   color: var(--text);
-  line-height: calc(var(--input-row-control-size) - 18px);
+  line-height: normal;
   overflow: hidden;
   cursor: text;
   user-select: none;
@@ -658,18 +661,35 @@ input::placeholder {
 }
 
 .autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 12px 7px 20px;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
+  color: var(--text);
+}
+
+.autocomplete-item-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--text);
+}
+
+.autocomplete-item-text.deprecated {
+  text-decoration: line-through;
+  color: var(--text-placeholder);
 }
 
 .autocomplete-item:hover,
 .autocomplete-item.active {
   background: var(--accent);
+  color: #fff;
+}
+
+.autocomplete-item:hover .autocomplete-item-text.deprecated,
+.autocomplete-item.active .autocomplete-item-text.deprecated {
   color: #fff;
 }
 

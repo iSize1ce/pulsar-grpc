@@ -83,7 +83,12 @@ export const useMethodStore = defineStore(
         for (const { name: svc, methods } of services) {
           const unary = (methods || []).filter((m) => !m.clientStreaming && !m.serverStreaming)
           for (const m of unary) {
-            allMethods.value.push({ svc, name: m.name, value: `${svc}::${m.name}` })
+            allMethods.value.push({
+              svc,
+              name: m.name,
+              value: `${svc}::${m.name}`,
+              deprecated: m.deprecated,
+            })
           }
         }
 

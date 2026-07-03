@@ -87,6 +87,8 @@ export const useMethodStore = defineStore(
           }
         }
 
+        ui.clearStatus()
+
         if (!keepForm) {
           ui.activateTab('tab-fields')
         }

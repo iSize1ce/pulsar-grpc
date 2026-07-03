@@ -35,6 +35,11 @@ export const useUiStore = defineStore(
       statusIsError.value = isError
     }
 
+    function clearStatus() {
+      statusMessage.value = ''
+      statusIsError.value = false
+    }
+
     function openPopover(name: string) {
       openPopoverName.value = name
     }
@@ -63,6 +68,7 @@ export const useUiStore = defineStore(
       toggleTheme,
       applyTheme,
       showStatus,
+      clearStatus,
       openPopover,
       closePopover,
       closeAllPopovers,

@@ -7,6 +7,7 @@
   import { usePayloadStore } from '@/stores/payload'
   import { useResponseStore } from '@/stores/response'
   import { useUiStore } from '@/stores/ui'
+  import { getHistoryEntry } from '@/api/endpoints'
   import type { HistoryEntry } from '@/types/api'
   import { formatHistoryDateTime } from '@/utils/dateFormat'
   import RecordsListItem from '@/components/shared/RecordsListItem.vue'
@@ -148,14 +149,25 @@
 
     conn.selectServerData(srv)
 
+    let detailPayload = ''
+    let detailResponse = ''
     try {
-      payload.savedPayload = JSON.parse(item.payload || 'null')
+      const detail = await getHistoryEntry(item.id)
+      detailPayload = detail.payload
+      detailResponse = detail.response
+    } catch (e: any) {
+      ui.showStatus(`Error loading history entry: ${e.message}`, true)
+      return
+    }
+
+    try {
+      payload.savedPayload = JSON.parse(detailPayload || 'null')
     } catch {
       payload.savedPayload = null
     }
 
     try {
-      const resp = JSON.parse(item.response || 'null')
+      const resp = JSON.parse(detailResponse || 'null')
       if (resp) {
         response.debugInfo = resp.debug || null
         if (resp.grpcStatus) {

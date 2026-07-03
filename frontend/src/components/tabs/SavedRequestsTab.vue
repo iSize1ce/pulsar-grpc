@@ -5,6 +5,7 @@
   import { useMethodStore } from '@/stores/method'
   import { usePayloadStore } from '@/stores/payload'
   import { useUiStore } from '@/stores/ui'
+  import { getSavedRequest } from '@/api/endpoints'
   import type { SavedRequest } from '@/types/api'
   import RecordsListItem from '@/components/shared/RecordsListItem.vue'
 
@@ -33,8 +34,16 @@
 
     conn.selectServerData(srv)
 
+    let payloadJson = ''
     try {
-      payload.savedPayload = JSON.parse(item.payload || 'null')
+      payloadJson = (await getSavedRequest(item.id)).payload
+    } catch (e: any) {
+      ui.showStatus(`Error loading saved request: ${e.message}`, true)
+      return
+    }
+
+    try {
+      payload.savedPayload = JSON.parse(payloadJson || 'null')
     } catch {
       payload.savedPayload = null
     }

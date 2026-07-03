@@ -3,7 +3,12 @@
   import { useMethodStore } from '@/stores/method'
   import { useUiStore } from '@/stores/ui'
   import { usePayloadStore } from '@/stores/payload'
-  import { getSavedRequests, getHistory } from '@/api/endpoints'
+  import {
+    getSavedRequests,
+    getSavedRequest,
+    getHistory,
+    getHistoryEntry,
+  } from '@/api/endpoints'
   import type { SavedRequest, HistoryEntry } from '@/types/api'
   import { formatHistoryDateTime } from '@/utils/dateFormat'
   import RecordsListItem from '@/components/shared/RecordsListItem.vue'
@@ -56,10 +61,10 @@
     }
   }
 
-  async function applyItem(item: SavedRequest | HistoryEntry) {
+  async function applyPayload(payloadJson: string) {
     if (!methodStore.currentService || !methodStore.currentMethod) return
     try {
-      payload.savedPayload = JSON.parse(item.payload || 'null')
+      payload.savedPayload = JSON.parse(payloadJson || 'null')
     } catch {
       ui.showStatus('Selected item has invalid payload JSON', true)
       return
@@ -69,6 +74,24 @@
       await methodStore.loadDescribe(methodStore.currentService, methodStore.currentMethod)
     } catch (e: any) {
       ui.showStatus(`Error loading method: ${e.message}`, true)
+    }
+  }
+
+  async function applySavedItem(item: SavedRequest) {
+    try {
+      const detail = await getSavedRequest(item.id)
+      await applyPayload(detail.payload)
+    } catch (e: any) {
+      ui.showStatus(`Error loading saved request: ${e.message}`, true)
+    }
+  }
+
+  async function applyHistoryItem(item: HistoryEntry) {
+    try {
+      const detail = await getHistoryEntry(item.id)
+      await applyPayload(detail.payload)
+    } catch (e: any) {
+      ui.showStatus(`Error loading history entry: ${e.message}`, true)
     }
   }
 </script>
@@ -101,7 +124,7 @@
             :subtitle="
               item.name ? item.method || `Server #${item.server_id}` : `Server #${item.server_id}`
             "
-            @click="applyItem(item)"
+            @click="applySavedItem(item)"
           />
         </div>
       </div>
@@ -121,7 +144,7 @@
             :meta-left="item.server_name || item.server_url || `Server #${item.server_id}`"
             :meta-right="formatHistoryDateTime(item.created_at)"
             :status-class="item.status_code === 0 ? 'ok' : 'err'"
-            @click="applyItem(item)"
+            @click="applyHistoryItem(item)"
           />
         </div>
       </div>

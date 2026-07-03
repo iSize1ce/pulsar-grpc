@@ -230,17 +230,25 @@ type SavedRequest struct {
 	Payload  string `db:"payload" json:"payload"`
 }
 
-func searchSavedRequests(query, method string) ([]SavedRequest, error) {
+// SavedRequestListItem is the lightweight shape used by list endpoints.
+type SavedRequestListItem struct {
+	ID       int64  `db:"id" json:"id"`
+	Name     string `db:"name" json:"name"`
+	ServerID int64  `db:"server_id" json:"server_id"`
+	Method   string `db:"method" json:"method"`
+}
+
+func searchSavedRequests(query, method string) ([]SavedRequestListItem, error) {
 	query = strings.TrimSpace(query)
 	method = strings.TrimSpace(method)
 
 	if query == "" && method == "" {
-		return queryAll[SavedRequest](db, `SELECT id, name, server_id, method, payload FROM saved_requests ORDER BY id DESC`)
+		return queryAll[SavedRequestListItem](db, `SELECT id, name, server_id, method FROM saved_requests ORDER BY id DESC`)
 	}
 
 	if query == "" {
-		return queryAll[SavedRequest](db,
-			`SELECT id, name, server_id, method, payload FROM saved_requests WHERE method = ? ORDER BY id DESC`,
+		return queryAll[SavedRequestListItem](db,
+			`SELECT id, name, server_id, method FROM saved_requests WHERE method = ? ORDER BY id DESC`,
 			method,
 		)
 	}
@@ -248,18 +256,18 @@ func searchSavedRequests(query, method string) ([]SavedRequest, error) {
 	if method != "" {
 		like := "%" + query + "%"
 		alt := layoutVariant(query)
-		var items []SavedRequest
+		var items []SavedRequestListItem
 		var err error
 		if alt != "" && alt != query {
 			likeAlt := "%" + alt + "%"
 			err = db.Select(&items,
-				`SELECT id, name, server_id, method, payload FROM saved_requests
+				`SELECT id, name, server_id, method FROM saved_requests
 				WHERE method = ? AND (name LIKE ? OR method LIKE ? OR name LIKE ? OR method LIKE ?) ORDER BY id DESC`,
 				method, like, like, likeAlt, likeAlt,
 			)
 		} else {
 			err = db.Select(&items,
-				`SELECT id, name, server_id, method, payload FROM saved_requests
+				`SELECT id, name, server_id, method FROM saved_requests
 				WHERE method = ? AND (name LIKE ? OR method LIKE ?) ORDER BY id DESC`,
 				method, like, like,
 			)
@@ -268,16 +276,28 @@ func searchSavedRequests(query, method string) ([]SavedRequest, error) {
 			return nil, fmt.Errorf("search saved_requests: %w", err)
 		}
 		if items == nil {
-			items = make([]SavedRequest, 0)
+			items = make([]SavedRequestListItem, 0)
 		}
 		return items, nil
 	}
 
-	return searchWithLayoutVariant[SavedRequest](db,
-		`SELECT id, name, server_id, method, payload FROM saved_requests WHERE name LIKE ? OR method LIKE ? ORDER BY id DESC`,
-		`SELECT id, name, server_id, method, payload FROM saved_requests WHERE name LIKE ? OR method LIKE ? OR name LIKE ? OR method LIKE ? ORDER BY id DESC`,
+	return searchWithLayoutVariant[SavedRequestListItem](db,
+		`SELECT id, name, server_id, method FROM saved_requests WHERE name LIKE ? OR method LIKE ? ORDER BY id DESC`,
+		`SELECT id, name, server_id, method FROM saved_requests WHERE name LIKE ? OR method LIKE ? OR name LIKE ? OR method LIKE ? ORDER BY id DESC`,
 		query,
 	)
+}
+
+func getSavedRequest(id int64) (SavedRequest, error) {
+	var item SavedRequest
+	if err := db.Get(
+		&item,
+		`SELECT id, name, server_id, method, payload FROM saved_requests WHERE id = ?`,
+		id,
+	); err != nil {
+		return SavedRequest{}, fmt.Errorf("get saved_request id=%d: %w", id, err)
+	}
+	return item, nil
 }
 
 func updateSavedRequest(id int64, serverID int64, method, payload string) error {
@@ -328,7 +348,19 @@ type HistoryEntry struct {
 	ServerName string `db:"server_name" json:"server_name,omitempty"`
 }
 
-const historySelectCols = `h.id, h.server_id, h.method, h.payload, h.response, h.status_code, h.created_at, s.url AS server_url, s.name AS server_name`
+// HistoryListItem is the lightweight shape used by list endpoints.
+type HistoryListItem struct {
+	ID         int64  `db:"id" json:"id"`
+	ServerID   int64  `db:"server_id" json:"server_id"`
+	Method     string `db:"method" json:"method"`
+	StatusCode int    `db:"status_code" json:"status_code"`
+	CreatedAt  string `db:"created_at" json:"created_at"`
+	ServerURL  string `db:"server_url" json:"server_url,omitempty"`
+	ServerName string `db:"server_name" json:"server_name,omitempty"`
+}
+
+const historyListSelectCols = `h.id, h.server_id, h.method, h.status_code, h.created_at, s.url AS server_url, s.name AS server_name`
+const historyDetailSelectCols = `h.id, h.server_id, h.method, h.payload, h.response, h.status_code, h.created_at, s.url AS server_url, s.name AS server_name`
 
 type HistoryFilter struct {
 	Query    string
@@ -340,10 +372,10 @@ type HistoryFilter struct {
 }
 
 type HistoryPage struct {
-	Items  []HistoryEntry `json:"items"`
-	Total  int            `json:"total"`
-	Limit  int            `json:"limit"`
-	Offset int            `json:"offset"`
+	Items  []HistoryListItem `json:"items"`
+	Total  int               `json:"total"`
+	Limit  int               `json:"limit"`
+	Offset int               `json:"offset"`
 }
 
 func searchHistory(filter HistoryFilter) (HistoryPage, error) {
@@ -397,10 +429,10 @@ func searchHistory(filter HistoryFilter) (HistoryPage, error) {
 	}
 
 	queryArgs := append(append([]any{}, args...), filter.Limit, filter.Offset)
-	items := make([]HistoryEntry, 0)
+	items := make([]HistoryListItem, 0)
 	if err := db.Select(
 		&items,
-		`SELECT `+historySelectCols+baseFrom+whereSQL+` ORDER BY h.id DESC LIMIT ? OFFSET ?`,
+		`SELECT `+historyListSelectCols+baseFrom+whereSQL+` ORDER BY h.id DESC LIMIT ? OFFSET ?`,
 		queryArgs...,
 	); err != nil {
 		return HistoryPage{}, fmt.Errorf("search history: %w", err)
@@ -412,6 +444,18 @@ func searchHistory(filter HistoryFilter) (HistoryPage, error) {
 		Limit:  filter.Limit,
 		Offset: filter.Offset,
 	}, nil
+}
+
+func getHistoryEntry(id int64) (HistoryEntry, error) {
+	var item HistoryEntry
+	if err := db.Get(
+		&item,
+		`SELECT `+historyDetailSelectCols+` FROM history h JOIN servers s ON s.id = h.server_id WHERE h.id = ?`,
+		id,
+	); err != nil {
+		return HistoryEntry{}, fmt.Errorf("get history id=%d: %w", id, err)
+	}
+	return item, nil
 }
 
 func createHistoryEntry(serverID int64, method, payload, response string, statusCode int) (HistoryEntry, error) {

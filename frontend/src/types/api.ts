@@ -15,6 +15,9 @@ export interface SavedRequest {
   name: string
   server_id: number
   method: string
+}
+
+export interface SavedRequestDetail extends SavedRequest {
   payload: string
 }
 
@@ -22,12 +25,15 @@ export interface HistoryEntry {
   id: number
   server_id: number
   method: string
-  payload: string
-  response: string
   status_code: number
   created_at: string
   server_url?: string
   server_name?: string
+}
+
+export interface HistoryEntryDetail extends HistoryEntry {
+  payload: string
+  response: string
 }
 
 export type HistoryStatusFilter = 'all' | 'ok' | 'error'

@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,8 +38,35 @@ func TestMetadataBelongsOnlyToServer(t *testing.T) {
 	if len(page.Items) != 1 {
 		t.Fatalf("history item count = %d, want 1", len(page.Items))
 	}
-	if !strings.Contains(page.Items[0].Response, "requestMeta") {
-		t.Fatalf("history debug metadata should be preserved: %s", page.Items[0].Response)
+	historyDetail, err := getHistoryEntry(page.Items[0].ID)
+	if err != nil {
+		t.Fatalf("getHistoryEntry() error = %v", err)
+	}
+	if !strings.Contains(historyDetail.Response, "requestMeta") {
+		t.Fatalf("history debug metadata should be preserved: %s", historyDetail.Response)
+	}
+
+	historyListJSON, err := json.Marshal(page.Items[0])
+	if err != nil {
+		t.Fatalf("marshal history list item: %v", err)
+	}
+	if strings.Contains(string(historyListJSON), "payload") || strings.Contains(string(historyListJSON), "response") {
+		t.Fatalf("history list item should omit payload and response: %s", historyListJSON)
+	}
+
+	savedItems, err := searchSavedRequests("", "")
+	if err != nil {
+		t.Fatalf("searchSavedRequests() error = %v", err)
+	}
+	if len(savedItems) != 1 {
+		t.Fatalf("saved request count = %d, want 1", len(savedItems))
+	}
+	savedListJSON, err := json.Marshal(savedItems[0])
+	if err != nil {
+		t.Fatalf("marshal saved request list item: %v", err)
+	}
+	if strings.Contains(string(savedListJSON), "payload") {
+		t.Fatalf("saved request list item should omit payload: %s", savedListJSON)
 	}
 
 	const wantMeta = `[{"key":"authorization","value":"Bearer token"}]`

@@ -42,7 +42,9 @@ func main() {
 	// CRUD endpoints — support multiple HTTP methods internally
 	mux.HandleFunc("/api/servers", handleServers)
 	mux.HandleFunc("/api/saved-requests", handleSavedRequests)
+	mux.HandleFunc("/api/saved-requests/detail", handleSavedRequestDetail)
 	mux.HandleFunc("/api/history", handleHistory)
+	mux.HandleFunc("/api/history/detail", handleHistoryDetail)
 
 	listener, err := listen(cfg.port)
 	if err != nil {

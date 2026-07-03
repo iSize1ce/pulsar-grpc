@@ -165,6 +165,30 @@ func handleSavedRequests(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleSavedRequestDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := parseOptionalInt64Param(r, "id")
+	if err != nil || id == 0 {
+		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		return
+	}
+
+	item, err := getSavedRequest(id)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+	respondJSON(w, item)
+}
+
 // handleHistory dispatches GET/POST/DELETE for request history.
 func handleHistory(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -259,6 +283,30 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func handleHistoryDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := parseOptionalInt64Param(r, "id")
+	if err != nil || id == 0 {
+		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		return
+	}
+
+	item, err := getHistoryEntry(id)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+	respondJSON(w, item)
 }
 
 func parseOptionalIntParam(r *http.Request, name string) (int, error) {

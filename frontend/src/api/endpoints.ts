@@ -2,7 +2,9 @@ import { apiPost, apiGet, apiPut, apiDelete } from './client'
 import type {
   Server,
   SavedRequest,
+  SavedRequestDetail,
   HistoryEntry,
+  HistoryEntryDetail,
   HistoryListParams,
   HistoryListResponse,
   ServiceInfo,
@@ -40,12 +42,15 @@ export const deleteServer = (id: number) => apiDelete<{ ok: boolean }>('/api/ser
 export const getSavedRequests = (q?: string, method?: string) =>
   apiGet<SavedRequest[]>('/api/saved-requests', { q: q || '', method: method || '' })
 
+export const getSavedRequest = (id: number) =>
+  apiGet<SavedRequestDetail>('/api/saved-requests/detail', { id })
+
 export const createSavedRequest = (
   name: string,
   server_id: number,
   method: string,
   payload: string,
-) => apiPost<SavedRequest>('/api/saved-requests', { name, server_id, method, payload })
+) => apiPost<SavedRequestDetail>('/api/saved-requests', { name, server_id, method, payload })
 
 export const updateSavedRequest = (
   id: number,
@@ -78,13 +83,23 @@ export const getHistory = async (params?: HistoryListParams): Promise<HistoryLis
   }
 }
 
+export const getHistoryEntry = (id: number) =>
+  apiGet<HistoryEntryDetail>('/api/history/detail', { id })
+
 export const createHistory = (
   server_id: number,
   method: string,
   payload: string,
   response: string,
   status_code: number,
-) => apiPost<HistoryEntry>('/api/history', { server_id, method, payload, response, status_code })
+) =>
+  apiPost<HistoryEntryDetail>('/api/history', {
+    server_id,
+    method,
+    payload,
+    response,
+    status_code,
+  })
 
 export const deleteHistory = (id: number) => apiDelete<{ ok: boolean }>('/api/history', { id })
 

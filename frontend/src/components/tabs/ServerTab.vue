@@ -76,7 +76,7 @@
 
   async function deleteServerItem(id: number) {
     await servers.removeServer(id)
-    await historyStore.loadHistory(historyStore.searchQuery)
+    await historyStore.loadHistory()
   }
 
   function toggleAddServer(e: Event) {

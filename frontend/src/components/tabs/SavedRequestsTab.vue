@@ -49,8 +49,12 @@
     if (item.method && method.allMethods.some((m) => m.value === item.method)) {
       method.selectMethod(item.method)
       const sep = item.method.indexOf('::')
-      await method.loadDescribe(item.method.slice(0, sep), item.method.slice(sep + 2))
-      ui.activateTab('tab-fields')
+      try {
+        await method.loadDescribe(item.method.slice(0, sep), item.method.slice(sep + 2))
+        ui.activateTab('tab-fields')
+      } catch (e: any) {
+        ui.showStatus(`Error loading method: ${e.message}`, true)
+      }
     }
   }
 

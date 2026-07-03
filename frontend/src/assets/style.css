@@ -1462,6 +1462,11 @@ select {
   font-size: 13px;
 }
 
+.history-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
 .history-status-dot {
   display: inline-block;
   width: 7px;

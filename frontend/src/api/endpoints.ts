@@ -3,6 +3,8 @@ import type {
   Server,
   SavedRequest,
   HistoryEntry,
+  HistoryListParams,
+  HistoryListResponse,
   ServiceInfo,
   InvokeResponse,
   MetaEntry,
@@ -56,8 +58,25 @@ export const deleteSavedRequest = (id: number) =>
   apiDelete<{ ok: boolean }>('/api/saved-requests', { id })
 
 // History
-export const getHistory = (q?: string, method?: string) =>
-  apiGet<HistoryEntry[]>('/api/history', { q: q || '', method: method || '' })
+export const getHistory = async (params?: HistoryListParams): Promise<HistoryListResponse> => {
+  const response = await apiGet<HistoryListResponse | HistoryEntry[]>('/api/history', params)
+
+  if (Array.isArray(response)) {
+    return {
+      items: response,
+      total: response.length,
+      limit: response.length,
+      offset: 0,
+    }
+  }
+
+  return {
+    items: Array.isArray(response.items) ? response.items : [],
+    total: typeof response.total === 'number' ? response.total : 0,
+    limit: typeof response.limit === 'number' ? response.limit : 0,
+    offset: typeof response.offset === 'number' ? response.offset : 0,
+  }
+}
 
 export const createHistory = (
   server_id: number,

@@ -41,11 +41,11 @@
     try {
       const [saved, history] = await Promise.all([
         getSavedRequests('', method),
-        getHistory('', method),
+        getHistory({ method, limit: 20 }),
       ])
       if (seq !== requestSeq) return
       savedItems.value = saved
-      historyItems.value = history
+      historyItems.value = history.items
     } catch (e: any) {
       if (seq !== requestSeq) return
       ui.showStatus(`Error loading method history: ${e.message}`, true)
@@ -56,7 +56,7 @@
     }
   }
 
-  function applyItem(item: SavedRequest | HistoryEntry) {
+  async function applyItem(item: SavedRequest | HistoryEntry) {
     if (!methodStore.currentService || !methodStore.currentMethod) return
     try {
       payload.savedPayload = JSON.parse(item.payload || 'null')
@@ -65,7 +65,11 @@
       return
     }
     ui.closePopover('methodHistory')
-    methodStore.loadDescribe(methodStore.currentService, methodStore.currentMethod)
+    try {
+      await methodStore.loadDescribe(methodStore.currentService, methodStore.currentMethod)
+    } catch (e: any) {
+      ui.showStatus(`Error loading method: ${e.message}`, true)
+    }
   }
 </script>
 

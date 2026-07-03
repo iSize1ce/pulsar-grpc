@@ -94,6 +94,9 @@ func initDB() error {
 			created_at  TEXT NOT NULL DEFAULT '',
 			FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 		)`,
+		`CREATE INDEX IF NOT EXISTS idx_history_server_id ON history(server_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_history_method ON history(method)`,
+		`CREATE INDEX IF NOT EXISTS idx_history_status_code ON history(status_code)`,
 		// SQLite requires this per-connection to enforce FK cascades.
 		`PRAGMA foreign_keys = ON`,
 	}
@@ -273,62 +276,88 @@ type HistoryEntry struct {
 
 const historySelectCols = `h.id, h.server_id, h.method, h.payload, h.response, h.status_code, h.created_at, s.url AS server_url, s.name AS server_name`
 
-func searchHistory(query, method string) ([]HistoryEntry, error) {
-	query = strings.TrimSpace(query)
-	method = strings.TrimSpace(method)
+type HistoryFilter struct {
+	Query    string
+	Method   string
+	ServerID int64
+	Status   string
+	Limit    int
+	Offset   int
+}
 
-	base := `SELECT ` + historySelectCols + ` FROM history h JOIN servers s ON s.id = h.server_id`
+type HistoryPage struct {
+	Items  []HistoryEntry `json:"items"`
+	Total  int            `json:"total"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
+}
 
-	var items []HistoryEntry
-	var err error
+func searchHistory(filter HistoryFilter) (HistoryPage, error) {
+	filter.Query = strings.TrimSpace(filter.Query)
+	filter.Method = strings.TrimSpace(filter.Method)
+	filter.Status = strings.TrimSpace(filter.Status)
+	filter.Limit = clampHistoryLimit(filter.Limit)
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
 
-	switch {
-	case query == "" && method == "":
-		err = db.Select(&items, base+` ORDER BY h.id DESC`)
+	baseFrom := ` FROM history h JOIN servers s ON s.id = h.server_id`
+	whereParts := make([]string, 0, 4)
+	args := make([]any, 0, 10)
 
-	case query == "":
-		err = db.Select(&items, base+` WHERE h.method = ? ORDER BY h.id DESC`, method)
+	if filter.Method != "" {
+		whereParts = append(whereParts, `h.method = ?`)
+		args = append(args, filter.Method)
+	}
+	if filter.ServerID > 0 {
+		whereParts = append(whereParts, `h.server_id = ?`)
+		args = append(args, filter.ServerID)
+	}
+	switch filter.Status {
+	case "ok":
+		whereParts = append(whereParts, `h.status_code = 0`)
+	case "error":
+		whereParts = append(whereParts, `h.status_code != 0`)
+	}
+	if filter.Query != "" {
+		searchParts := []string{`h.method LIKE ?`, `s.url LIKE ?`, `s.name LIKE ?`}
+		like := "%" + filter.Query + "%"
+		args = append(args, like, like, like)
 
-	case method != "":
-		like := "%" + query + "%"
-		alt := layoutVariant(query)
-		if alt != "" && alt != query {
+		if alt := layoutVariant(filter.Query); alt != "" && alt != filter.Query {
 			likeAlt := "%" + alt + "%"
-			err = db.Select(&items,
-				base+` WHERE h.method = ? AND (h.method LIKE ? OR s.url LIKE ? OR s.name LIKE ? OR h.method LIKE ? OR s.url LIKE ? OR s.name LIKE ?) ORDER BY h.id DESC`,
-				method, like, like, like, likeAlt, likeAlt, likeAlt,
-			)
-		} else {
-			err = db.Select(&items,
-				base+` WHERE h.method = ? AND (h.method LIKE ? OR s.url LIKE ? OR s.name LIKE ?) ORDER BY h.id DESC`,
-				method, like, like, like,
-			)
+			searchParts = append(searchParts, `h.method LIKE ?`, `s.url LIKE ?`, `s.name LIKE ?`)
+			args = append(args, likeAlt, likeAlt, likeAlt)
 		}
-
-	default:
-		like := "%" + query + "%"
-		alt := layoutVariant(query)
-		if alt != "" && alt != query {
-			likeAlt := "%" + alt + "%"
-			err = db.Select(&items,
-				base+` WHERE h.method LIKE ? OR s.url LIKE ? OR s.name LIKE ? OR h.method LIKE ? OR s.url LIKE ? OR s.name LIKE ? ORDER BY h.id DESC`,
-				like, like, like, likeAlt, likeAlt, likeAlt,
-			)
-		} else {
-			err = db.Select(&items,
-				base+` WHERE h.method LIKE ? OR s.url LIKE ? OR s.name LIKE ? ORDER BY h.id DESC`,
-				like, like, like,
-			)
-		}
+		whereParts = append(whereParts, `(`+strings.Join(searchParts, ` OR `)+`)`)
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("search history: %w", err)
+	whereSQL := ""
+	if len(whereParts) > 0 {
+		whereSQL = ` WHERE ` + strings.Join(whereParts, ` AND `)
 	}
-	if items == nil {
-		items = make([]HistoryEntry, 0)
+
+	var total int
+	if err := db.Get(&total, `SELECT COUNT(*)`+baseFrom+whereSQL, args...); err != nil {
+		return HistoryPage{}, fmt.Errorf("count history: %w", err)
 	}
-	return items, nil
+
+	queryArgs := append(append([]any{}, args...), filter.Limit, filter.Offset)
+	items := make([]HistoryEntry, 0)
+	if err := db.Select(
+		&items,
+		`SELECT `+historySelectCols+baseFrom+whereSQL+` ORDER BY h.id DESC LIMIT ? OFFSET ?`,
+		queryArgs...,
+	); err != nil {
+		return HistoryPage{}, fmt.Errorf("search history: %w", err)
+	}
+
+	return HistoryPage{
+		Items:  items,
+		Total:  total,
+		Limit:  filter.Limit,
+		Offset: filter.Offset,
+	}, nil
 }
 
 func createHistoryEntry(serverID int64, method, payload, response string, statusCode int) (HistoryEntry, error) {
@@ -360,6 +389,17 @@ func clearHistory() error {
 		return fmt.Errorf("clear history: %w", err)
 	}
 	return nil
+}
+
+func clampHistoryLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return 50
+	case limit > 200:
+		return 200
+	default:
+		return limit
+	}
 }
 
 // ─── Shared query helpers ────────────────────────────────────────────────────

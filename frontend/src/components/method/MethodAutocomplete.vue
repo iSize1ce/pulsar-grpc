@@ -73,7 +73,7 @@
     }, 150)
   }
 
-  function selectMethod(value: string) {
+  async function selectMethod(value: string) {
     if (!value) return
     const currentVal = methodStore.currentMethodValue
     methodStore.selectMethod(value)
@@ -85,7 +85,15 @@
 
     if (value !== currentVal) {
       const sep = value.indexOf('::')
-      methodStore.loadDescribe(value.slice(0, sep), value.slice(sep + 2))
+      try {
+        await methodStore.loadDescribe(value.slice(0, sep), value.slice(sep + 2))
+      } catch (e: any) {
+        // Show error in alert when method loading fails
+        alert(`Error loading method: ${e.message}`)
+        // Revert to previous method if loading failed
+        methodStore.selectMethod(currentVal)
+        inputValue.value = currentVal
+      }
     }
   }
 

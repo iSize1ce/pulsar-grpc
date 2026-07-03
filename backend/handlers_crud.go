@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"database/sql"
 )
@@ -167,7 +169,35 @@ func handleSavedRequests(w http.ResponseWriter, r *http.Request) {
 func handleHistory(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		items, err := searchHistory(r.URL.Query().Get("q"), r.URL.Query().Get("method"))
+		serverID, err := parseOptionalInt64Param(r, "server_id")
+		if err != nil {
+			http.Error(w, `{"error":"invalid server_id"}`, http.StatusBadRequest)
+			return
+		}
+		limit, err := parseOptionalIntParam(r, "limit")
+		if err != nil {
+			http.Error(w, `{"error":"invalid limit"}`, http.StatusBadRequest)
+			return
+		}
+		offset, err := parseOptionalIntParam(r, "offset")
+		if err != nil {
+			http.Error(w, `{"error":"invalid offset"}`, http.StatusBadRequest)
+			return
+		}
+		status := strings.TrimSpace(r.URL.Query().Get("status"))
+		if status != "" && status != "ok" && status != "error" {
+			http.Error(w, `{"error":"invalid status"}`, http.StatusBadRequest)
+			return
+		}
+
+		items, err := searchHistory(HistoryFilter{
+			Query:    r.URL.Query().Get("q"),
+			Method:   r.URL.Query().Get("method"),
+			ServerID: serverID,
+			Status:   status,
+			Limit:    limit,
+			Offset:   offset,
+		})
 		if err != nil {
 			respondError(w, err)
 			return
@@ -229,4 +259,34 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func parseOptionalIntParam(r *http.Request, name string) (int, error) {
+	value := strings.TrimSpace(r.URL.Query().Get(name))
+	if value == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, err
+	}
+	if n < 0 {
+		return 0, strconv.ErrSyntax
+	}
+	return n, nil
+}
+
+func parseOptionalInt64Param(r *http.Request, name string) (int64, error) {
+	value := strings.TrimSpace(r.URL.Query().Get(name))
+	if value == "" {
+		return 0, nil
+	}
+	n, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	if n < 0 {
+		return 0, strconv.ErrSyntax
+	}
+	return n, nil
 }

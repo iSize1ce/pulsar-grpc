@@ -30,6 +30,24 @@ export interface HistoryEntry {
   server_name?: string
 }
 
+export type HistoryStatusFilter = 'all' | 'ok' | 'error'
+
+export interface HistoryListParams {
+  q?: string
+  method?: string
+  server_id?: number
+  status?: Exclude<HistoryStatusFilter, 'all'>
+  limit?: number
+  offset?: number
+}
+
+export interface HistoryListResponse {
+  items: HistoryEntry[]
+  total: number
+  limit: number
+  offset: number
+}
+
 export interface ServiceInfo {
   name: string
   methods: MethodInfo[]

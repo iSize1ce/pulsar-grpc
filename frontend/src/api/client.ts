@@ -49,12 +49,21 @@ export async function apiDelete<T>(endpoint: string, body: any): Promise<T> {
   })
 }
 
-export async function apiGet<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+export async function apiGet<T>(
+  endpoint: string,
+  params?: object,
+): Promise<T> {
   let url = endpoint
   if (params) {
     const qs = new URLSearchParams()
-    for (const [k, v] of Object.entries(params)) {
-      if (v) qs.set(k, v)
+    for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
+      if (
+        (typeof v === 'string' && v !== '') ||
+        typeof v === 'number' ||
+        typeof v === 'boolean'
+      ) {
+        qs.set(k, String(v))
+      }
     }
     const str = qs.toString()
     if (str) url += '?' + str

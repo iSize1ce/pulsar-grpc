@@ -278,28 +278,30 @@
       <label>Method</label>
       <div class="method-controls">
         <MethodAutocomplete />
-        <MethodHistoryPopover />
       </div>
     </div>
 
     <div v-show="hasFields" class="fields-container" :class="{ 'json-active': payload.jsonMode }">
       <div class="view-mode-tabs" aria-label="Payload view mode">
-        <button
-          type="button"
-          class="btn-json-toggle"
-          :class="{ active: !payload.jsonMode }"
-          @click="setJsonMode(false)"
-        >
-          Form
-        </button>
-        <button
-          type="button"
-          class="btn-json-toggle"
-          :class="{ active: payload.jsonMode }"
-          @click="setJsonMode(true)"
-        >
-          JSON
-        </button>
+        <div class="view-mode-toggle-group">
+          <button
+            type="button"
+            class="btn-json-toggle"
+            :class="{ active: !payload.jsonMode }"
+            @click="setJsonMode(false)"
+          >
+            Form
+          </button>
+          <button
+            type="button"
+            class="btn-json-toggle"
+            :class="{ active: payload.jsonMode }"
+            @click="setJsonMode(true)"
+          >
+            JSON
+          </button>
+        </div>
+        <MethodHistoryPopover />
       </div>
 
       <div v-show="!payload.jsonMode">

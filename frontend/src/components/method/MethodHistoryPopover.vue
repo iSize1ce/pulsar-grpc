@@ -74,52 +74,56 @@
 </script>
 
 <template>
-  <button
-    type="button"
-    class="btn-method-history input-row-action-btn"
-    title="Saved payloads and history"
-    :disabled="!hasMethod"
-    :class="{ open: ui.isPopoverOpen('methodHistory') }"
-    @click="togglePopover"
-  >
-    &#x1f558;
-  </button>
+  <div class="method-history-popover-anchor">
+    <button
+      type="button"
+      class="btn-method-history input-row-action-btn"
+      title="Saved payloads and history"
+      :disabled="!hasMethod"
+      :class="{ open: ui.isPopoverOpen('methodHistory') }"
+      @click="togglePopover"
+    >
+      &#x1f558;
+    </button>
 
-  <div v-show="ui.isPopoverOpen('methodHistory')" class="method-history-popover" @click.stop>
-    <div class="method-history-section">
-      <div class="method-history-title">Saved Requests</div>
-      <div class="records-list">
-        <div v-if="loading" class="records-empty">Loading...</div>
-        <div v-else-if="!savedItems.length" class="records-empty">
-          No saved requests for this method
+    <div v-show="ui.isPopoverOpen('methodHistory')" class="method-history-popover" @click.stop>
+      <div class="method-history-section">
+        <div class="method-history-title">Saved Requests</div>
+        <div class="records-list">
+          <div v-if="loading" class="records-empty">Loading...</div>
+          <div v-else-if="!savedItems.length" class="records-empty">
+            No saved requests for this method
+          </div>
+          <RecordsListItem
+            v-for="item in savedItems"
+            :key="item.id"
+            :title="item.name || item.method || 'Unnamed request'"
+            :subtitle="
+              item.name ? item.method || `Server #${item.server_id}` : `Server #${item.server_id}`
+            "
+            @click="applyItem(item)"
+          />
         </div>
-        <RecordsListItem
-          v-for="item in savedItems"
-          :key="item.id"
-          :title="item.name || item.method || 'Unnamed request'"
-          :subtitle="
-            item.name ? item.method || `Server #${item.server_id}` : `Server #${item.server_id}`
-          "
-          @click="applyItem(item)"
-        />
       </div>
-    </div>
 
-    <div class="method-history-section">
-      <div class="method-history-title">History</div>
-      <div class="records-list">
-        <div v-if="loading" class="records-empty">Loading...</div>
-        <div v-else-if="!historyItems.length" class="records-empty">No history for this method</div>
-        <RecordsListItem
-          v-for="item in historyItems"
-          :key="item.id"
-          :title="item.method || ''"
-          title-trim-start
-          :meta-left="item.server_name || item.server_url || `Server #${item.server_id}`"
-          :meta-right="formatHistoryDateTime(item.created_at)"
-          :status-class="item.status_code === 0 ? 'ok' : 'err'"
-          @click="applyItem(item)"
-        />
+      <div class="method-history-section">
+        <div class="method-history-title">History</div>
+        <div class="records-list">
+          <div v-if="loading" class="records-empty">Loading...</div>
+          <div v-else-if="!historyItems.length" class="records-empty">
+            No history for this method
+          </div>
+          <RecordsListItem
+            v-for="item in historyItems"
+            :key="item.id"
+            :title="item.method || ''"
+            title-trim-start
+            :meta-left="item.server_name || item.server_url || `Server #${item.server_id}`"
+            :meta-right="formatHistoryDateTime(item.created_at)"
+            :status-class="item.status_code === 0 ? 'ok' : 'err'"
+            @click="applyItem(item)"
+          />
+        </div>
       </div>
     </div>
   </div>

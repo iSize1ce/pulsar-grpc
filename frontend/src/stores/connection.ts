@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Server, MetaEntry } from '@/types/api'
 import * as api from '@/api/endpoints'
+import { useServersStore } from './servers'
+import { useUiStore } from './ui'
+
+sanitizePersistedConnectionMeta()
 
 export const useConnectionStore = defineStore(
   'connection',
@@ -37,18 +41,24 @@ export const useConnectionStore = defineStore(
       if (!currentServerId.value) return
       if (metaSaveTimer) clearTimeout(metaSaveTimer)
 
-      const doSave = () => {
+      const serverId = currentServerId.value
+      const doSave = async () => {
         const meta = JSON.stringify(collectMeta())
-        if (lastSavedMeta[currentServerId.value] === meta) return
-        lastSavedMeta[currentServerId.value] = meta
-        api.updateServerMeta(currentServerId.value, meta)
+        if (lastSavedMeta[serverId] === meta) return
+        try {
+          await api.updateServerMeta(serverId, meta)
+          lastSavedMeta[serverId] = meta
+          useServersStore().setServerMeta(serverId, meta)
+        } catch (e: any) {
+          useUiStore().showStatus(`Metadata save failed: ${e.message}`, true)
+        }
       }
 
       if (immediate) {
-        doSave()
+        void doSave()
         return
       }
-      metaSaveTimer = setTimeout(doSave, 500)
+      metaSaveTimer = setTimeout(() => void doSave(), 500)
     }
 
     function parseMeta(metaStr: string): MetaEntry[] {
@@ -73,7 +83,23 @@ export const useConnectionStore = defineStore(
   },
   {
     persist: {
-      pick: ['grpcUrl', 'currentServerId', 'metadata'],
+      pick: ['grpcUrl', 'currentServerId'],
     },
   },
 )
+
+function sanitizePersistedConnectionMeta() {
+  if (typeof localStorage === 'undefined') return
+
+  const raw = localStorage.getItem('connection')
+  if (!raw) return
+
+  try {
+    const persisted = JSON.parse(raw)
+    if (!persisted || typeof persisted !== 'object' || !('metadata' in persisted)) return
+    delete persisted.metadata
+    localStorage.setItem('connection', JSON.stringify(persisted))
+  } catch {
+    /* Ignore malformed persisted state; Pinia will fall back to defaults. */
+  }
+}

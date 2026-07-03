@@ -105,6 +105,9 @@ func initDB() error {
 			return fmt.Errorf("initDB exec %q: %w", s[:min(40, len(s))], err)
 		}
 	}
+	if err := dropLegacyMetaColumns(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -114,6 +117,57 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func dropLegacyMetaColumns() error {
+	for _, table := range []string{"saved_requests", "history"} {
+		if err := dropColumnIfExists(table, "meta"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func dropColumnIfExists(table, column string) error {
+	exists, err := tableHasColumn(table, column)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	if _, err := db.Exec(fmt.Sprintf(`ALTER TABLE %s DROP COLUMN %s`, table, column)); err != nil {
+		return fmt.Errorf("drop legacy column %s.%s: %w", table, column, err)
+	}
+	return nil
+}
+
+func tableHasColumn(table, column string) (bool, error) {
+	if _, ok := allowedTables[table]; !ok {
+		return false, fmt.Errorf("tableHasColumn: unknown table %q", table)
+	}
+
+	rows, err := db.Queryx(fmt.Sprintf(`PRAGMA table_info(%s)`, table))
+	if err != nil {
+		return false, fmt.Errorf("inspect table %s: %w", table, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, columnType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			return false, fmt.Errorf("scan table_info %s: %w", table, err)
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("iterate table_info %s: %w", table, err)
+	}
+	return false, nil
 }
 
 // ─── Server CRUD ─────────────────────────────────────────────────────────────

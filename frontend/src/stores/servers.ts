@@ -36,5 +36,10 @@ export const useServersStore = defineStore('servers', () => {
     }
   }
 
-  return { servers, searchQuery, loadServers, addServer, removeServer }
+  function setServerMeta(id: number, meta: string) {
+    const srv = servers.value.find((item) => item.id === id)
+    if (srv) srv.meta = meta
+  }
+
+  return { servers, searchQuery, loadServers, addServer, removeServer, setServerMeta }
 })

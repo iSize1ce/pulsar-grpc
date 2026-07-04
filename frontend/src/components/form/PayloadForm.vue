@@ -67,7 +67,7 @@
         if (isWktScalarField(f)) {
           const v = formState[id]
           if (v === '' || v == null) {
-            obj[jsonKey] = defaultFieldValue(f)
+            obj[jsonKey] = checkedEmptyFieldValue(f)
             continue
           }
           const parsed = parseFieldVal(v, f)
@@ -114,17 +114,9 @@
   }
 
   function defaultFieldValue(f: ProtoField | MapComponent): any {
-    const wkt = wktScalarCfg(f)
-    if (wkt) {
-      if (wkt.kind === 'timestamp') return null
-      if ('messageType' in f && f.messageType === 'google.protobuf.Duration') return null
-      if (wkt.kind === 'jsonArray') return []
-      if (wkt.kind === 'jsonObject' || wkt.kind === 'jsonValue') return null
-      return zeroVal(wkt.kind)
-    }
-
     if ('repeated' in f && f.repeated) return []
-    if (f.type === 'map' || f.type === 'message') return null
+    if (f.type === 'map') return {}
+    if (f.type === 'message') return null
     if (f.type === 'enum') {
       const values = ('enumValues' in f ? f.enumValues : undefined) || []
       return values.find((v) => v.number === 0)?.name || values[0]?.name || ''
@@ -132,15 +124,27 @@
     return zeroVal(f.type)
   }
 
+  function checkedEmptyFieldValue(f: ProtoField | MapComponent): any {
+    const wkt = wktScalarCfg(f)
+    if (wkt) {
+      if (wkt.kind === 'jsonObject') return {}
+      if (wkt.kind === 'jsonArray') return []
+      if (wkt.kind === 'jsonValue') return ''
+      return zeroVal(wkt.kind)
+    }
+    return defaultFieldValue(f)
+  }
+
   function collectionDefaultFieldValue(f: ProtoField | MapComponent): any {
     const wkt = wktScalarCfg(f)
-    if (!wkt) return defaultFieldValue(f)
-    if (wkt.kind === 'timestamp') return '1970-01-01T00:00:00Z'
-    if ('messageType' in f && f.messageType === 'google.protobuf.Duration') return '0s'
-    if (wkt.kind === 'jsonObject') return {}
-    if (wkt.kind === 'jsonArray') return []
-    if (wkt.kind === 'jsonValue') return null
-    return defaultFieldValue(f)
+    if (wkt) return checkedEmptyFieldValue(f)
+    if (f.type === 'enum') {
+      const values = ('enumValues' in f ? f.enumValues : undefined) || []
+      return values.find((v) => v.number === 0)?.name || values[0]?.name || ''
+    }
+    if (f.type === 'map') return {}
+    if (f.type === 'message') return null
+    return zeroVal(f.type)
   }
 
   function collectOneofPayload(obj: Record<string, any>, f: ProtoField, id: string, depth: number) {

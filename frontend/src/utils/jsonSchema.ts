@@ -36,7 +36,8 @@ function fieldToSchema(
 ): any {
   if (f.type === 'map') return mapSchema(f, getMessageFields, seen, depth)
   const base = scalarSchema(f, getMessageFields, seen, depth)
-  return f.repeated ? { type: 'array', items: base } : base
+  if (f.repeated) return { type: 'array', items: base }
+  return nullableMessageSchema(f, base)
 }
 
 function mapSchema(
@@ -112,4 +113,12 @@ function scalarSchema(
     default:
       return {}
   }
+}
+
+function nullableMessageSchema(f: ProtoField | MapComponent, schema: any): any {
+  if (f.type !== 'message' || !schema || Object.keys(schema).length === 0) return schema
+  if (Array.isArray(schema.type))
+    return schema.type.includes('null') ? schema : { ...schema, type: [...schema.type, 'null'] }
+  if (typeof schema.type === 'string') return { ...schema, type: [schema.type, 'null'] }
+  return { anyOf: [schema, { type: 'null' }] }
 }

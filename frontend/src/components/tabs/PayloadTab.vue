@@ -229,7 +229,21 @@
       jsonError.value = ''
       if (requestEditor.value) requestEditor.value.layout()
     } else {
-      applyJsonToForm()
+      if (!editorMatchesCachedPayload()) applyJsonToForm()
+    }
+  }
+
+  function editorMatchesCachedPayload(): boolean {
+    if (!requestEditor.value) return true
+    try {
+      const current = JSON.stringify(
+        JSON.parse(requestEditor.value.getValue().trim() || '{}'),
+        null,
+        2,
+      )
+      return current === payload.requestPayloadCache
+    } catch {
+      return false
     }
   }
 

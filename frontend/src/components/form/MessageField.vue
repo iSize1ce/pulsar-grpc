@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { inject, computed } from 'vue'
+  import { inject, computed, ref } from 'vue'
   import type { ProtoField } from '@/types/proto'
-  import { isWktScalarField, wktScalarCfg } from '@/utils/wktScalar'
+  import { isFormattedWktScalarField, isWktScalarField, wktScalarCfg } from '@/utils/wktScalar'
   import { randomValue } from '@/utils/randomValue'
   import { INT_TYPES, UINT_TYPES, FLOAT_TYPES } from '@/utils/protoTypes'
   import { typeLabel } from './fieldUtils'
@@ -26,12 +26,16 @@
   const onFormChange = inject<() => void>('onFormChange', () => {})
 
   const toggleId = `${props.fieldId}__toggle`
+  const inputFocused = ref(false)
 
   const isWkt = computed(() => isWktScalarField(props.field))
+  const isNullableInput = computed(() => isFormattedWktScalarField(props.field))
   const isMessage = computed(() => props.field.type === 'message' && !isWkt.value)
   const isOptionalScalar = computed(() => props.field.optional && !isMessage.value && !isWkt.value)
 
-  const isOn = computed(() => !props.toggleable || (toggleState[toggleId] ?? false))
+  const isOn = computed(
+    () => isNullableInput.value || !props.toggleable || (toggleState[toggleId] ?? false),
+  )
 
   function onToggle(on: boolean) {
     if (!props.toggleable) return
@@ -109,6 +113,34 @@
     onFormChange()
   }
 
+  const inputValue = computed(() => {
+    const value = formState[props.fieldId]
+    if (isNullableInput.value && !inputFocused.value && (value === '' || value == null)) {
+      return 'null'
+    }
+    return value ?? ''
+  })
+
+  function onInputFocus() {
+    inputFocused.value = true
+    if (
+      isNullableInput.value &&
+      (formState[props.fieldId] === '' || formState[props.fieldId] == null)
+    ) {
+      formState[props.fieldId] = ''
+    }
+  }
+
+  function onInputBlur() {
+    inputFocused.value = false
+    if (!isNullableInput.value) return
+    const value = formState[props.fieldId]
+    if (value == null || String(value).trim() === '') {
+      delete formState[props.fieldId]
+      onFormChange()
+    }
+  }
+
   function onSelectChange(val: string) {
     formState[props.fieldId] = val
     onFormChange()
@@ -133,7 +165,7 @@
     :field="field"
     :type-str="typeLabel(field)"
     :deprecated="field.deprecated"
-    :show-toggle="toggleable"
+    :show-toggle="toggleable && !isNullableInput"
     :toggle-on="isOn"
     :clickable-type="!isMessage"
     @toggle="onToggle"
@@ -187,7 +219,9 @@
     :placeholder="inputPlaceholder"
     :step="inputStep"
     :min="inputMin"
-    :value="formState[fieldId] ?? ''"
+    :value="inputValue"
+    @focus="onInputFocus"
     @input="onInput"
+    @blur="onInputBlur"
   />
 </template>

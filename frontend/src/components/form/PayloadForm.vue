@@ -8,7 +8,7 @@
     formatCollectionValueForInput,
     formatOneofValueForInput,
   } from '@/utils/formatValue'
-  import { isWktScalarField, wktScalarCfg } from '@/utils/wktScalar'
+  import { isFormattedWktScalarField, isWktScalarField, wktScalarCfg } from '@/utils/wktScalar'
   import { useMethodStore } from '@/stores/method'
   import ProtoField_ from './ProtoField.vue'
 
@@ -59,6 +59,17 @@
       }
       if (f.repeated) {
         collectRepeatedPayload(obj, f, id, jsonKey, depth)
+        continue
+      }
+
+      if (isFormattedWktScalarField(f)) {
+        const v = formState[id]
+        if (v === '' || v == null) {
+          obj[jsonKey] = null
+          continue
+        }
+        const parsed = parseFieldVal(v, f)
+        obj[jsonKey] = parsed === undefined ? null : parsed
         continue
       }
 
@@ -264,6 +275,17 @@
       }
       if (f.repeated) {
         fillRepeated(f, id, jsonKey, data, depth)
+        continue
+      }
+
+      if (isFormattedWktScalarField(f)) {
+        if (!(jsonKey in data)) continue
+        const val = data[jsonKey]
+        if (val == null) {
+          delete formState[id]
+        } else {
+          formState[id] = formatFieldValueForInput(val, f)
+        }
         continue
       }
 

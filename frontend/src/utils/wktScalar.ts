@@ -43,3 +43,12 @@ export function wktScalarCfg(f: ProtoField | MapComponent | null | undefined): W
 export function isWktScalarField(f: ProtoField | MapComponent | null | undefined): boolean {
   return !!wktScalarCfg(f)
 }
+
+export function isFormattedWktScalarField(
+  f: ProtoField | MapComponent | null | undefined,
+): boolean {
+  if (!f || f.type !== 'message' || !('messageType' in f)) return false
+  return (
+    f.messageType === 'google.protobuf.Timestamp' || f.messageType === 'google.protobuf.Duration'
+  )
+}

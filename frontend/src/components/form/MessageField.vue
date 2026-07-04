@@ -15,8 +15,9 @@
       field: ProtoField
       fieldId: string
       depth?: number
+      toggleable?: boolean
     }>(),
-    { depth: 0 },
+    { depth: 0, toggleable: true },
   )
 
   const methodStore = useMethodStore()
@@ -30,9 +31,10 @@
   const isMessage = computed(() => props.field.type === 'message' && !isWkt.value)
   const isOptionalScalar = computed(() => props.field.optional && !isMessage.value && !isWkt.value)
 
-  const isOn = computed(() => toggleState[toggleId] ?? false)
+  const isOn = computed(() => !props.toggleable || (toggleState[toggleId] ?? false))
 
   function onToggle(on: boolean) {
+    if (!props.toggleable) return
     toggleState[toggleId] = on
     onFormChange()
   }
@@ -114,7 +116,7 @@
 
   function randomize() {
     if (isMessage.value) return
-    if (!isOn.value) toggleState[toggleId] = true
+    if (props.toggleable && !isOn.value) toggleState[toggleId] = true
     const val = randomValue(props.field)
     if (val || val === 'false') {
       formState[props.fieldId] = val
@@ -131,7 +133,7 @@
     :field="field"
     :type-str="typeLabel(field)"
     :deprecated="field.deprecated"
-    :show-toggle="true"
+    :show-toggle="toggleable"
     :toggle-on="isOn"
     :clickable-type="!isMessage"
     @toggle="onToggle"

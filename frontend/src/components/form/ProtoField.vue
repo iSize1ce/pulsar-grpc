@@ -19,8 +19,9 @@
       field: ProtoField
       prefix: string
       depth?: number
+      toggleable?: boolean
     }>(),
-    { depth: 0 },
+    { depth: 0, toggleable: true },
   )
 
   const fieldId = computed(() =>
@@ -82,10 +83,17 @@
       :field="field"
       :field-id="fieldId"
       :depth="depth"
+      :toggleable="toggleable"
     />
 
     <!-- Optional scalar (toggleable) -->
-    <MessageField v-else-if="field.optional" :field="field" :field-id="fieldId" :depth="depth" />
+    <MessageField
+      v-else-if="field.optional"
+      :field="field"
+      :field-id="fieldId"
+      :depth="depth"
+      :toggleable="toggleable"
+    />
 
     <!-- Bool -->
     <BoolField v-else-if="field.type === 'bool'" :field="field" :field-id="fieldId" />

@@ -36,10 +36,7 @@
   )
 
   const isSelectedMessage = computed(
-    () =>
-      selectedOption.value?.type === 'message' &&
-      !isWktScalarField(selectedOption.value) &&
-      !!selectedOption.value?.fields?.length,
+    () => selectedOption.value?.type === 'message' && !isWktScalarField(selectedOption.value),
   )
 
   function onSelect(val: string) {
@@ -88,6 +85,7 @@
         :field="{ ...selectedOption, name: selectedOption.name }"
         :prefix="fieldId"
         :depth="depth"
+        :toggleable="false"
       />
     </template>
   </div>

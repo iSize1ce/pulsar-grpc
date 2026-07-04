@@ -96,9 +96,11 @@ export function oneofDefaultValue(f: ProtoField | MapComponent | null | undefine
   if (!f) return ''
   const cfg = wktScalarCfg(f)
   if (cfg) {
+    if (cfg.kind === 'timestamp') return null
+    if ('messageType' in f && f.messageType === 'google.protobuf.Duration') return null
     if (cfg.kind === 'jsonObject') return {}
     if (cfg.kind === 'jsonArray') return []
-    if (cfg.kind === 'jsonValue') return ''
+    if (cfg.kind === 'jsonValue') return null
     return zeroVal(cfg.kind)
   }
   if (f.type === 'enum') {

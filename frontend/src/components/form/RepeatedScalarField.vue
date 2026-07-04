@@ -72,10 +72,8 @@
 
   const enumOptions = computed(() => {
     const opts: { value: string; label: string }[] = []
-    const hasZero = props.field.enumValues?.some((v) => v.number === 0)
-    if (!hasZero) opts.push({ value: '', label: '0' })
     for (const v of props.field.enumValues || []) {
-      opts.push({ value: v.number === 0 ? '' : v.name, label: `${v.name} (${v.number})` })
+      opts.push({ value: v.name, label: `${v.name} (${v.number})` })
     }
     return opts
   })
@@ -127,7 +125,7 @@
       <CustomSelect
         v-else-if="inputType === 'enum'"
         :options="enumOptions"
-        :value="formState[`${fieldId}_${idx}`] ?? ''"
+        :value="formState[`${fieldId}_${idx}`] ?? field.enumValues?.[0]?.name ?? ''"
         @change="onSelectChange(idx, $event)"
       />
       <!-- Scalar input -->

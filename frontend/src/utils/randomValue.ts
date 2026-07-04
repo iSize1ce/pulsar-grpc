@@ -48,7 +48,7 @@ export function randomValue(field: ProtoField): string {
   if (t === 'bool') return Math.random() < 0.5 ? 'true' : 'false'
   if (t === 'enum' && field.enumValues?.length) {
     const ev = field.enumValues[Math.floor(Math.random() * field.enumValues.length)]
-    return ev.number === 0 ? '' : ev.name
+    return ev.name
   }
   if (t === 'string') {
     const chars = 'abcdefghijklmnopqrstuvwxyz'

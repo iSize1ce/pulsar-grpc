@@ -96,10 +96,8 @@
   const enumOptions = computed(() => {
     if (props.field.type !== 'enum') return []
     const opts: { value: string; label: string }[] = []
-    const hasZero = props.field.enumValues?.some((v) => v.number === 0)
-    if (!hasZero) opts.push({ value: '', label: '0' })
     for (const v of props.field.enumValues || []) {
-      opts.push({ value: v.number === 0 ? '' : v.name, label: `${v.name} (${v.number})` })
+      opts.push({ value: v.name, label: `${v.name} (${v.number})` })
     }
     return opts
   })
@@ -168,7 +166,7 @@
       v-show="isOn"
       :id="fieldId"
       :options="enumOptions"
-      :value="formState[fieldId] ?? ''"
+      :value="formState[fieldId] ?? field.enumValues?.[0]?.name ?? ''"
       @change="onSelectChange"
     />
   </template>

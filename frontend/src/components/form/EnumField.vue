@@ -16,13 +16,9 @@
 
   const options = computed(() => {
     const opts: { value: string; label: string }[] = []
-    const hasZero = props.field.enumValues?.some((v) => v.number === 0)
-    if (!hasZero) {
-      opts.push({ value: '', label: '0' })
-    }
     for (const v of props.field.enumValues || []) {
       const label = `${v.name} (${v.number})`
-      opts.push({ value: v.number === 0 ? '' : v.name, label })
+      opts.push({ value: v.name, label })
     }
     return opts
   })
@@ -50,7 +46,7 @@
   <CustomSelect
     :id="fieldId"
     :options="options"
-    :value="formState[fieldId] ?? ''"
+    :value="formState[fieldId] ?? field.enumValues?.[0]?.name ?? ''"
     @change="onSelect"
   />
 </template>

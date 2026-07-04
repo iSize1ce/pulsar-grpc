@@ -67,8 +67,7 @@
         if (isWktScalarField(f)) {
           const v = formState[id]
           if (v === '' || v == null) {
-            const cfg = wktScalarCfg(f)
-            obj[jsonKey] = cfg ? zeroVal(cfg.kind) : ''
+            obj[jsonKey] = defaultFieldValue(f)
             continue
           }
           const parsed = parseFieldVal(v, f)
@@ -97,15 +96,12 @@
       const parsed = parseFieldVal(v, f)
       if (parsed !== undefined && parsed !== zeroVal(f.type)) obj[jsonKey] = parsed
     }
-    return withFlatDefaultsIfEmpty(obj, ff)
+    return withFlatDefaults(obj, ff)
   }
 
-  function withFlatDefaultsIfEmpty(
-    obj: Record<string, any>,
-    fields: ProtoField[],
-  ): Record<string, any> {
-    if (Object.keys(obj).length || !fields.length) return obj
-    return collectFlatDefaultPayload(fields)
+  function withFlatDefaults(obj: Record<string, any>, fields: ProtoField[]): Record<string, any> {
+    if (!fields.length) return obj
+    return { ...collectFlatDefaultPayload(fields), ...obj }
   }
 
   function collectFlatDefaultPayload(fields: ProtoField[]): Record<string, any> {
@@ -120,6 +116,8 @@
   function defaultFieldValue(f: ProtoField | MapComponent): any {
     const wkt = wktScalarCfg(f)
     if (wkt) {
+      if (wkt.kind === 'timestamp') return null
+      if ('messageType' in f && f.messageType === 'google.protobuf.Duration') return null
       if (wkt.kind === 'jsonArray') return []
       if (wkt.kind === 'jsonObject' || wkt.kind === 'jsonValue') return null
       return zeroVal(wkt.kind)
@@ -132,6 +130,17 @@
       return values.find((v) => v.number === 0)?.name || values[0]?.name || ''
     }
     return zeroVal(f.type)
+  }
+
+  function collectionDefaultFieldValue(f: ProtoField | MapComponent): any {
+    const wkt = wktScalarCfg(f)
+    if (!wkt) return defaultFieldValue(f)
+    if (wkt.kind === 'timestamp') return '1970-01-01T00:00:00Z'
+    if ('messageType' in f && f.messageType === 'google.protobuf.Duration') return '0s'
+    if (wkt.kind === 'jsonObject') return {}
+    if (wkt.kind === 'jsonArray') return []
+    if (wkt.kind === 'jsonValue') return null
+    return defaultFieldValue(f)
   }
 
   function collectOneofPayload(obj: Record<string, any>, f: ProtoField, id: string, depth: number) {
@@ -184,7 +193,7 @@
 
     const vals = state.items.map((idx) => {
       const v = formState[`${id}_${idx}`]
-      return v !== '' && v != null ? parseFieldVal(v, f) : zeroVal(f.type)
+      return v !== '' && v != null ? parseFieldVal(v, f) : collectionDefaultFieldValue(f)
     })
     if (vals.length) obj[jsonKey] = vals
   }
@@ -218,8 +227,10 @@
       } else {
         const rawVal = formState[`${id}_${idx}__value`]
         const parsed =
-          rawVal === '' || rawVal == null ? zeroVal(mapValue.type) : parseFieldVal(rawVal, mapValue)
-        out[key] = parsed === undefined ? zeroVal(mapValue.type) : parsed
+          rawVal === '' || rawVal == null
+            ? collectionDefaultFieldValue(mapValue)
+            : parseFieldVal(rawVal, mapValue)
+        out[key] = parsed === undefined ? collectionDefaultFieldValue(mapValue) : parsed
       }
     }
     if (Object.keys(out).length) obj[jsonKey] = out
